@@ -1,1 +1,24 @@
-debugpy==1.8.17
+# Developer tools:
+debugpy==1.8.17         # Python debugger (e.g. VS Code, remote debugging)
+setuptools<81           # Pin older Setuptools to avoid deprecation warning for pkg_resources (required by Supervisor)
+
+# Flask microservice:
+Flask==3.0.3            # Lightweight web framework
+Werkzeug==3.0.3         # HTTP engine and routing, the basis of Flask
+flasgger==0.9.7.1       # Automatic Swagger/OpenAPI documentation
+requests==2.32.3        # HTTP client for communicating with other services
+python-dotenv==1.0.1    # Loading configuration from .env file
+
+# Process management
+supervisor==4.2.5       # Process manager, service startup and monitoring
+
+# IoT microservice (Raspberry Pi)
+RPi.GPIO==0.7.1         # Low-level GPIO pin support on Raspberry Pi
+gpiozero==2.0           # Higher level API for hardware support (e.g. LED, buttons)
+
+# Django microservice
+Django==5.0.7           # Full web framework (ORM, admin panel, routing, migrations)
+whitenoise==6.7.0       # Serving static files in Django without an additional server
+
+# HTTP application server (for Django behind Nginx)
+gunicorn==22.0.0        # WSGI server to run Django in production

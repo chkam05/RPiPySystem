@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Logowanie</h1>
+<form method='post'>
+    {% csrf_token %}
+    <label>Login <input name='login' required></label><br>
+    <label>Hasło <input type='password' name='password' required></label><br>
+    <button type='submit'>Zaloguj</button>
+    {% if error %}<p style='color:red'>{{ error }}</p>{% endif %}
+</form>
+{% endblock %}
