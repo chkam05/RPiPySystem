@@ -13,14 +13,20 @@ _Ten plik gromadzi minimalny kontekst potrzebny do kontynuacji pracy nad projekt
 
 ```
 Katalog główny: /opt/RPiPySystem
+  📁 .gpt/
+    📄 context_generator.py  (16 KB)
+    📄 context_generator.sh  (2 KB)
   📁 auth_service/
     📁 controllers/
-      📄 health.py  (0 KB)
+      📄 health.py  (1 KB)
       📄 sessions.py  (1 KB)
-      📄 users.py  (1 KB)
+      📄 users.py  (4 KB)
+    📁 models/
+      📄 user.py  (2 KB)
+    📁 storage/
+      📄 users_storage.py  (4 KB)
     📄 app.py  (1 KB)
-    📄 config.py  (0 KB)
-    📄 db.json  (0 KB)
+    📄 config.py  (1 KB)
     📄 swagger.py  (1 KB)
   📁 control_service/
     📁 control_site/
@@ -60,14 +66,12 @@ Katalog główny: /opt/RPiPySystem
   📁 nginx/
     📄 pi_stack.conf  (2 KB)
   📁 scripts/
-    📄 clear_logs.sh  (0 KB)
-    📄 gpt_context_generator.sh  (1 KB)
-    📄 init_nginx.sh  (1 KB)
-    📄 kill_supervisord.sh  (1 KB)
+    📄 init_nginx.sh  (2 KB)
+    📄 install.sh  (2 KB)
+    📄 kill_supervisord.sh  (2 KB)
   📁 supervisor/
     📄 nginx_stop.py  (2 KB)
     📄 reaper.py  (3 KB)
-    📄 requirements_solver.py  (9 KB)
   📁 supervisor_service/
     📄 app.py  (1 KB)
     📄 config.py  (0 KB)
@@ -75,16 +79,16 @@ Katalog główny: /opt/RPiPySystem
     📄 swagger.py  (1 KB)
   📁 utils/
     📄 __init__.py  (0 KB)
-    📄 gpt_context_generator.py  (16 KB)
+    📄 auto_swag.py  (7 KB)
+    📄 base_controller.py  (1 KB)
     📄 utils.py  (1 KB)
   📄 .env.example  (0 KB)
   📄 .gitignore  (5 KB)
   📄 LICENSE  (1 KB)
   📄 main.py  (0 KB)
-  📄 project_context.md  (6 KB)
   📄 README.md  (0 KB)
   📄 requirements.txt  (1 KB)
-  📄 start.sh  (2 KB)
+  📄 start.sh  (4 KB)
   📄 supervisord.conf  (5 KB)
 ```
 
@@ -165,7 +169,7 @@ whitenoise==6.7.0
 
 **Nasłuchiwacze zdarzeń**:
 
-- `reaper` → `/opt/RPiPySystem/.venv/bin/python /opt/RPiPySystem/supervisor/reaper.py`
+- `reaper` → `%(ENV_VIRTUAL_ENV)s/bin/python /opt/RPiPySystem/supervisor/reaper.py`
   
   logi: stdout=`/dev/null`, stderr=`/dev/stderr`
   
@@ -194,15 +198,15 @@ whitenoise==6.7.0
 
 - `/control/` → `http://127.0.0.1:8080/`
 
-- `/api/supervisor/` → `http://127.0.0.1:5001/`
+- `/api/supervisor/` → `http://127.0.0.1:5001`
 
-- `/api/auth/` → `http://127.0.0.1:5002/`
+- `/api/auth/` → `http://127.0.0.1:5002`
 
-- `/api/email/` → `http://127.0.0.1:5003/`
+- `/api/email/` → `http://127.0.0.1:5003`
 
-- `/api/info/` → `http://127.0.0.1:5004/`
+- `/api/info/` → `http://127.0.0.1:5004`
 
-- `/api/io/` → `http://127.0.0.1:5005/`
+- `/api/io/` → `http://127.0.0.1:5005`
 
 
 
@@ -219,7 +223,7 @@ whitenoise==6.7.0
 
 ## Klucze konfiguracyjne (tylko nazwy)
 
-- `auth_service/config.py`: BIND, DB_PATH, PORT, SECRET
+- `auth_service/config.py`: BIND, DB_PATH, DEFAULT_ROOT_ID, DEFAULT_USERS, PORT, SECRET
 
 
 - `email_service/config.py`: BIND, PORT, SMTP_FROM, SMTP_HOST, SMTP_PORT
