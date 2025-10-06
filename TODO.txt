@@ -1,0 +1,5 @@
+1. Unifikacja konfiguracji swaggerów
+2. Konfiguracja autentykacji
+3. Praca z .env
+4. Dodanie autentykacji do reszty endpointów
+5. Logowanie (messages)
