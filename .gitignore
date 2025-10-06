@@ -210,3 +210,10 @@ __marimo__/
 logs/
 supervisord.log
 supervisord.pid
+
+# Secrets and sensitive runtime files
+/secrets/
+
+# Ignore all db folders except placeholder files
+**/db/*
+!**/db/.gitkeep

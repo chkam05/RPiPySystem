@@ -2,8 +2,8 @@ from datetime import datetime
 import sys
 import traceback
 
-class Utils:
-    """Static helper class for logging and simple diagnostics."""
+
+class EventLogger:
 
     @staticmethod
     def log(msg: str, prefix: str = None, exc: Exception = None):

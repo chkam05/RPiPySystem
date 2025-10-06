@@ -27,6 +27,7 @@ Katalog główny: /opt/RPiPySystem
       📄 users_storage.py  (4 KB)
     📄 app.py  (1 KB)
     📄 config.py  (1 KB)
+    📄 db.json  (0 KB)
     📄 swagger.py  (1 KB)
   📁 control_service/
     📁 control_site/
@@ -84,11 +85,11 @@ Katalog główny: /opt/RPiPySystem
     📄 utils.py  (1 KB)
   📄 .env.example  (0 KB)
   📄 .gitignore  (5 KB)
+  📄 launch.sh  (4 KB)
   📄 LICENSE  (1 KB)
   📄 main.py  (0 KB)
   📄 README.md  (0 KB)
   📄 requirements.txt  (1 KB)
-  📄 start.sh  (4 KB)
   📄 supervisord.conf  (5 KB)
 ```
 

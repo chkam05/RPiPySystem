@@ -16,9 +16,9 @@ APP_NAME="$(basename -- "${PROJECT_ROOT%/}")"
 SUPERVISOR_SOCK_URI="${SUPERVISOR_SOCK_URI:-unix:///tmp/supervisor.sock}"
 
 if [ -x "$PROJECT_ROOT/.venv/bin/supervisorctl" ]; then
-    CTL="$PROJECT_ROOT/.venv/bin/supervisorctl -s $SUPERVISOR_SOCK_URI"
+    SUPERVISORCTL="$PROJECT_ROOT/.venv/bin/supervisorctl -s $SUPERVISOR_SOCK_URI"
 else
-    CTL="supervisorctl -s $SUPERVISOR_SOCK_URI"
+    SUPERVISORCTL="supervisorctl -s $SUPERVISOR_SOCK_URI"
 fi
 # ------------------------------------------------------------------------------
 
