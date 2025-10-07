@@ -27,14 +27,46 @@ fi
 GENERATOR_SCRIPT="$PROJECT_ROOT/.gpt/context_generator.py"
 OUT_FILE="${OUT_FILE:-$PROJECT_ROOT/project_context.md}"
 MAX_DEPTH="${MAX_DEPTH:-3}"
+
+# Provide files (space or newline separated) to embed fully in the MD.
+# EXTRA_MD_FILES="${EXTRA_MD_FILES:-}"
+EXTRA_MD_FILES="./auth_service/app.py \
+    ./auth_service/config.py \
+    ./auth_service/swagger.py \
+    ./auth_service/controllers/sessions.py \
+    ./auth_service/utils/auth_guard.py \
+    ./nginx/pi_stack.conf \
+    ./supervisor_service/app.py \
+    ./supervisor_service/config.py \
+    ./supervisor_service/swagger.py"
+# -----------------------------------------------------------------------------
+
+# Build a sanitized array of absolute paths for --extra
+# -----------------------------------------------------------------------------
+EXTRA_ARGS=()
+if [ -n "$EXTRA_MD_FILES" ]; then
+    # shellcheck disable=SC2206
+    EXTRA_LIST=($EXTRA_MD_FILES)
+    for p in "${EXTRA_LIST[@]}"; do
+        if [ -e "$p" ]; then
+            EXTRA_ARGS+=("$(realpath -m "$p")")
+        else
+            echo "[$APP_NAME] WARN: extra file not found: $p" >&2
+        fi
+    done
+fi
 # -----------------------------------------------------------------------------
 
 if [ -f "$GENERATOR_SCRIPT" ]; then
     echo "[$APP_NAME] Starting ChatGPT context file generation script ..."
-    python "$GENERATOR_SCRIPT" \
-        --root "$PROJECT_ROOT" \
-        --out "$OUT_FILE" \
-        --max-depth "$MAX_DEPTH"
+
+    PY_ARGS=( --root "$PROJECT_ROOT" --out "$OUT_FILE" --max-depth "$MAX_DEPTH" )
+
+    if [ ${#EXTRA_ARGS[@]} -gt 0 ]; then
+        PY_ARGS+=( --extra "${EXTRA_ARGS[@]}" )
+    fi
+    
+    python "$GENERATOR_SCRIPT" "${PY_ARGS[@]}"
 
     echo "[$APP_NAME] Context file generation finished: $OUT_FILE"
 else

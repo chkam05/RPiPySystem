@@ -10,6 +10,7 @@ class HealthController(BaseController):
     @auto_swag(
         tags=['health'],
         summary='Health check',
+        security=[],    # Public
         responses={
             200: ok(object_schema({'status': {'type': 'string', 'example': 'ok'}}))
         }

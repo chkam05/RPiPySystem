@@ -2,8 +2,9 @@ import base64
 import os
 import secrets
 import tempfile
+from flask import request
 from pathlib import Path
-from typing import Optional
+from typing import Dict, Optional
 
 DEFAULT_SECRET_FILE = os.getenv("AUTH_SECRET_FILE", "./secrets/auth_secret.key")
 
@@ -48,3 +49,27 @@ def load_auth_secret(secret_file: Optional[str] = None) -> str:
     secret = _generate_secret_str(64)
     _atomic_write_text(file_path, secret)
     return secret
+
+
+def read_bearer_from_request() -> Optional[str]:
+    auth = request.headers.get("Authorization", "")
+    if not auth:
+        return None
+
+    raw = auth.strip()
+    raw = raw.replace("Bearer%20", "Bearer ")
+
+    while raw.lower().startswith("bearer "):
+        raw = raw[7:].lstrip()
+
+    if (raw.startswith('"') and raw.endswith('"')) or (raw.startswith("'") and raw.endswith("'")):
+        raw = raw[1:-1].strip()
+
+    return raw or None
+
+
+def bearer_headers_from_request() -> Optional[Dict[str, str]]:
+    token = read_bearer_from_request()
+    if not token:
+        return None
+    return {"Authorization": f"Bearer {token}"}

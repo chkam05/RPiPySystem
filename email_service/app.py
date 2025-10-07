@@ -1,19 +1,28 @@
 from flask import Flask
 from flasgger import Swagger
-from .config import BIND, PORT
-from .controllers.send import send_bp
-from .controllers.health import health_bp
-from .swagger import SWAGGER_CONFIG
+import logging
+
+from .config import BIND, PORT, SECRET
+from .controllers.health import HealthController
+from .swagger import SWAGGER_TEMPLATE, SWAGGER_CONFIG
 
 # Initialize Flask app
 app = Flask(__name__)
 
+# Configure Logger
+logging.basicConfig(
+    level=logging.INFO,
+    format='[%(asctime)s] [%(name)s] %(levelname)s: %(message)s'
+)
+logging.getLogger('werkzeug').setLevel(logging.INFO)
+
+app.config['SECRET_KEY'] = SECRET
+
 # Register blueprints
-app.register_blueprint(send_bp)
-app.register_blueprint(health_bp)
+app.register_blueprint(HealthController())
 
 # Initialize Swagger using the external configuration
-swagger = Swagger(app, config=SWAGGER_CONFIG)
+swagger = Swagger(app, template=SWAGGER_TEMPLATE, config=SWAGGER_CONFIG)
 
 # Run the service
 if __name__ == '__main__':
