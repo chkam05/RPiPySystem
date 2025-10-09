@@ -5,6 +5,7 @@ LINKS = [
     {'name': 'Email API (Swagger)', 'url': 'http://127.0.0.1:5003/apidocs/'},
     {'name': 'Info API (Swagger)', 'url': 'http://127.0.0.1:5004/apidocs/'},
     {'name': 'IO API (Swagger)', 'url': 'http://127.0.0.1:5005/apidocs/'},
+    {'name': 'Supervisor API (Swagger)', 'url': 'http://127.0.0.1:5001/apidocs/'},
 ]
 
 def links_view(request):

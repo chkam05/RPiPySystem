@@ -4,7 +4,7 @@ import requests
 from flask import jsonify, request
 
 from auth_service.models.user import User
-from supervisor_service.process_manager import ProcessManager
+from supervisor_service.utils.process_manager import ProcessManager
 from supervisor_service.config import AUTH_BASE_URL, AUTH_VALIDATION_ENDPOINT
 from utils.base_controller import BaseController
 from utils.auto_swag import auto_swag, ok, unauthorized
@@ -13,12 +13,12 @@ from utils.security import bearer_headers_from_request
 
 class ProcessesController(BaseController):
     def __init__(
-            self,
-            *,
-            url_prefix: str = "/api/supervisor/processes",
-            process_manager: Optional[ProcessManager] = None,
-            auth_base_url: Optional[str] = None,
-            session: Optional[requests.sessions.Session] = None) -> None:
+            self, 
+            *, 
+            url_prefix: str = "/api/supervisor/processes", 
+            process_manager: ProcessManager | None = None,
+            auth_base_url: str | None = None,
+            session: requests.sessions.Session | None = None):
         super().__init__("supervisor_processes", __name__, url_prefix=url_prefix)
         self.pm = process_manager or ProcessManager()
         self.auth_base_url = auth_base_url or AUTH_BASE_URL
@@ -28,11 +28,12 @@ class ProcessesController(BaseController):
     
     def _require_root(self):
         headers = bearer_headers_from_request()
+        
         if not headers:
             return False, {"message": "missing bearer token"}, 401
 
         try:
-            url = f"{self.auth_base_url}{AUTH_VALIDATION_ENDPOINT}"
+            url = f"{self.auth_base_url}/api/auth/session/validate"
             r = self.http.post(url, headers=headers, timeout=3.0)
         except requests.RequestException:
             return False, {"message": "auth service unreachable"}, 503
@@ -42,7 +43,7 @@ class ProcessesController(BaseController):
 
         try:
             payload = r.json()
-            level = (payload.get("user") or {}).get(User.LEVEL_ROOT)
+            level = (payload.get("user") or {}).get("level")
         except Exception:
             return False, {"message": "auth response malformed"}, 503
 
@@ -52,6 +53,12 @@ class ProcessesController(BaseController):
         return True, None, 200
     
     # endregion --- Auth helper methods ---
+
+    def _exec(self, fn, *args, **kwargs):
+        try:
+            return jsonify(fn(*args, **kwargs)), 200
+        except RuntimeError as e:
+            return jsonify({"message": str(e)}), 503
 
     @auto_swag(
         tags=["supervisor"],
@@ -77,11 +84,18 @@ class ProcessesController(BaseController):
         ok_, err, code = self._require_root()
         if not ok_:
             return jsonify(err), code
-        return jsonify(self.pm.list_processes())
+        return self._exec(self.pm.list_processes)
 
     @auto_swag(
         tags=["supervisor"],
         summary="Start process (Root only)",
+        parameters=[{
+            "in": "path",
+            "name": "name",
+            "schema": {"type": "string", "example": "service_name"},
+            "required": True,
+            "description": "Service name"
+        }],
         responses={
             200: ok(
                 {
@@ -100,11 +114,18 @@ class ProcessesController(BaseController):
         ok_, err, code = self._require_root()
         if not ok_:
             return jsonify(err), code
-        return jsonify(self.pm.start(name))
+        return self._exec(self.pm.start, name)
 
     @auto_swag(
         tags=["supervisor"],
         summary="Stop process (Root only)",
+        parameters=[{
+            "in": "path",
+            "name": "name",
+            "schema": {"type": "string", "example": "service_name"},
+            "required": True,
+            "description": "Service name"
+        }],
         responses={
             200: ok(
                 {
@@ -123,11 +144,18 @@ class ProcessesController(BaseController):
         ok_, err, code = self._require_root()
         if not ok_:
             return jsonify(err), code
-        return jsonify(self.pm.stop(name))
+        return self._exec(self.pm.stop, name)
 
     @auto_swag(
         tags=["supervisor"],
         summary="Restart process (Root only)",
+        parameters=[{
+            "in": "path",
+            "name": "name",
+            "schema": {"type": "string", "example": "service_name"},
+            "required": True,
+            "description": "Service name"
+        }],
         responses={
             200: ok(
                 {
@@ -146,7 +174,7 @@ class ProcessesController(BaseController):
         ok_, err, code = self._require_root()
         if not ok_:
             return jsonify(err), code
-        return jsonify(self.pm.restart(name))
+        return self._exec(self.pm.restart, name)
 
     @auto_swag(
         tags=["supervisor"],
@@ -167,7 +195,7 @@ class ProcessesController(BaseController):
         ok_, err, code = self._require_root()
         if not ok_:
             return jsonify(err), code
-        return jsonify(self.pm.stop_all())
+        return self._exec(self.pm.stop_all)
 
     # region --- Endpoint registration ---
 

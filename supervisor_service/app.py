@@ -2,7 +2,7 @@ from flask import Flask
 from flasgger import Swagger
 import logging
 
-from .config import BIND, PORT, SECRET
+from .config import BIND, PORT
 from .controllers.processes import ProcessesController
 from .swagger import SWAGGER_TEMPLATE, SWAGGER_CONFIG
 
@@ -15,8 +15,6 @@ logging.basicConfig(
     format='[%(asctime)s] [%(name)s] %(levelname)s: %(message)s'
 )
 logging.getLogger('werkzeug').setLevel(logging.INFO)
-
-app.config['SECRET_KEY'] = SECRET
 
 # Register blueprints
 app.register_blueprint(ProcessesController())
