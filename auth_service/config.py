@@ -1,8 +1,8 @@
 import os
 import uuid
 from werkzeug.security import generate_password_hash
-from auth_service.models.user import User
-from utils.security import load_auth_secret
+
+from .models.user import User
 
 
 # --- Database files ---
@@ -29,7 +29,6 @@ DEFAULT_USERS = [
         User.FIELD_LEVEL: 'Root'
     }
 ]
-
 
 # def db_path(storage_name: str) -> str:
 #     os.makedirs(DB_DIR, exist_ok=True)
