@@ -6,70 +6,26 @@ from flask import request
 from pathlib import Path
 from typing import Dict, Optional
 
-DEFAULT_SECRET_FILE = os.getenv("AUTH_SECRET_FILE", "./secrets/auth_secret.key")
 
+class SecurityUtils:
 
-def _ensure_parent_dir(path: Path) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
+    @staticmethod
+    def read_bearer_from_request() -> Optional[str]:
+        auth = request.headers.get("Authorization", "")
+        if not auth:
+            return None
+        
+        auth = auth.strip().replace("Bearer%20", "Bearer ")
 
+        while auth.lower().startswith("bearer "):
+            auth = auth[7:].lstrip()
 
-def _atomic_write_text(path: Path, content: str) -> None:
-    _ensure_parent_dir(path)
-    dirpath = str(path.parent)
-
-    with tempfile.NamedTemporaryFile("w", delete=False, dir=dirpath, encoding="utf-8") as tf:
-        tf.write(content)
-        tmp_name = tf.name
-    os.replace(tmp_name, path)
+        if (auth.startswith('"') and auth.endswith('"')) or (auth.startswith("'") and auth.endswith("'")):
+            auth = auth[1:-1].strip()
+        
+        return auth or None
     
-    try:
-        os.chmod(path, 0o600)
-    except OSError:
-        pass
-
-
-def _generate_secret_str(num_bytes: int = 64) -> str:
-    raw = secrets.token_bytes(num_bytes)
-    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
-
-
-def load_auth_secret(secret_file: Optional[str] = None) -> str:
-    # Cross-service loader for AUTH_SECRET.
-    # 1) ENV wins
-    env_secret = os.getenv("AUTH_SECRET")
-    if env_secret:
-        return env_secret
-
-    # 2) File
-    file_path = Path(secret_file or DEFAULT_SECRET_FILE)
-    if file_path.exists():
-        return file_path.read_text(encoding="utf-8").strip()
-
-    # 3) Generate once and persist
-    secret = _generate_secret_str(64)
-    _atomic_write_text(file_path, secret)
-    return secret
-
-
-def read_bearer_from_request() -> Optional[str]:
-    auth = request.headers.get("Authorization", "")
-    if not auth:
-        return None
-
-    raw = auth.strip()
-    raw = raw.replace("Bearer%20", "Bearer ")
-
-    while raw.lower().startswith("bearer "):
-        raw = raw[7:].lstrip()
-
-    if (raw.startswith('"') and raw.endswith('"')) or (raw.startswith("'") and raw.endswith("'")):
-        raw = raw[1:-1].strip()
-
-    return raw or None
-
-
-def bearer_headers_from_request() -> Optional[Dict[str, str]]:
-    token = read_bearer_from_request()
-    if not token:
-        return None
-    return {"Authorization": f"Bearer {token}"}
+    @classmethod
+    def bearer_headers_from_request(cls) -> Optional[Dict[str, str]]:
+        token = cls.read_bearer_from_request()
+        return {"Authorization": f"Bearer {token}"} if token else None

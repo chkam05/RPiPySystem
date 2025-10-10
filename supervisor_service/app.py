@@ -6,6 +6,7 @@ from .config import BIND, PORT
 from .controllers.processes import ProcessesController
 from .swagger import SWAGGER_TEMPLATE, SWAGGER_CONFIG
 
+
 # Initialize Flask app
 app = Flask(__name__)
 

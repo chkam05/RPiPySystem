@@ -22,7 +22,7 @@ Katalog główny: /opt/RPiPySystem
       📄 sessions.py  (11 KB)
       📄 users.py  (9 KB)
     📁 db/
-      📄 sessions.json  (2 KB)
+      📄 sessions.json  (3 KB)
       📄 users.json  (0 KB)
     📁 models/
       📄 access_token_payload.py  (2 KB)
@@ -80,25 +80,33 @@ Katalog główny: /opt/RPiPySystem
   📁 secrets/
     📄 auth_secret.key  (0 KB)
   📁 supervisor_service/
+    📁 controllers/
+      📄 processes.py  (7 KB)
+    📁 listeners/
+      📄 event_listener.py  (0 KB)
+      📄 event_logger.py  (1 KB)
+      📄 event_service.py  (5 KB)
+      📄 rules.py  (4 KB)
+    📁 models/
+      📄 event_handler.py  (1 KB)
+    📁 utils/
+      📄 process_manager.py  (2 KB)
+      📄 supervisor_proxy_factory.py  (2 KB)
+      📄 timeout_transport.py  (0 KB)
     📄 app.py  (1 KB)
     📄 config.py  (0 KB)
-    📄 process_manager.py  (1 KB)
     📄 swagger.py  (2 KB)
-  📁 supervisor_utils/
-    📄 event_logger.py  (1 KB)
-    📄 nginx_stop.py  (2 KB)
-    📄 reaper.py  (3 KB)
   📁 utils/
     📄 __init__.py  (0 KB)
     📄 auto_swag.py  (7 KB)
     📄 base_controller.py  (1 KB)
-    📄 security.py  (1 KB)
+    📄 security.py  (2 KB)
   📄 .env.example  (0 KB)
   📄 .gitignore  (5 KB)
   📄 launch.sh  (4 KB)
   📄 LICENSE  (1 KB)
   📄 main.py  (0 KB)
-  📄 project_context.md  (7 KB)
+  📄 project_context.md  (30 KB)
   📄 README.md  (0 KB)
   📄 requirements.txt  (1 KB)
   📄 supervisord.conf  (5 KB)
@@ -194,16 +202,11 @@ whitenoise==6.7.0
 
 **Nasłuchiwacze zdarzeń**:
 
-- `reaper` → `%(ENV_VIRTUAL_ENV)s/bin/python /opt/RPiPySystem/supervisor_utils/reaper.py`
+- `event_listener` → `%(ENV_VIRTUAL_ENV)s/bin/python ./supervisor_service/listeners/event_listener.py`
   
   logi: stdout=`/dev/null`, stderr=`/dev/stderr`
   
-  env: PYTHONPATH=%(here)s
-- `nginx_stop` → `%(ENV_VIRTUAL_ENV)s/bin/python /opt/RPiPySystem/supervisor_utils/nginx_stop.py`
-  
-  logi: stdout=`/dev/null`, stderr=`/dev/stderr`
-  
-  env: PYTHONPATH=%(here)s
+  env: PYTHONPATH=%(here)s, PYTHONUNBUFFERED="1"
 
 
 ## Reverse proxy Nginx
@@ -260,11 +263,259 @@ whitenoise==6.7.0
 - `io_service/config.py`: BIND, PORT, SECRET
 
 
-- `supervisor_service/config.py`: BIND, PORT, SUPERVISOR_URL
+- `supervisor_service/config.py`: AUTH_BASE_URL, AUTH_VALIDATION_ENDPOINT, BIND, PORT, SUPERVISOR_PASS, SUPERVISOR_TIMEOUT, SUPERVISOR_URL, SUPERVISOR_USER
 
 
 
 ## Fragmenty plików
+
+### `launch.sh`
+
+```text
+#!/usr/bin/env bash
+# ------------------------------------------------------------------------------
+# RPiSystem multiservice application startup script.
+# ------------------------------------------------------------------------------
+
+set -Eeuo pipefail
+clear
+
+# Resolve project root and work from there.
+PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd -P)"
+APP_NAME="$(basename -- "${PROJECT_ROOT%/}")"
+
+cd "$PROJECT_ROOT"
+
+# Clear supervisor and service logs
+# ------------------------------------------------------------------------------
+echo "[$APP_NAME] Clearing supervisor and services logs ..."
+LOG_DIR="${PROJECT_ROOT}/logs"
+
+if [ ! -d "$LOG_DIR" ]; then
+    mkdir -- "$LOG_DIR"
+fi
+
+rm -rf -- "$LOG_DIR"/*
+# ------------------------------------------------------------------------------
+
+# Create & activate Python Virtual Environment
+# ------------------------------------------------------------------------------
+VENV_DIR="$PROJECT_ROOT/.venv"
+
+if [ ! -d "$VENV_DIR" ]; then
+    echo "[$APP_NAME] Python virtual environment not found."
+    echo "[$APP_NAME] Creating python virtual environment at $VENV_DIR ..."
+
+    python -m venv "$VENV_DIR"
+
+    # Activate Python Virtual Environment and finish one-time setup
+    # shellcheck disable=SC1091
+    echo "[$APP_NAME] Activating python virtual environment ..."
+    . "$VENV_DIR/bin/activate"
+
+    # Upgrade pip and install pip-dependent packages
+    echo "[$APP_NAME] Updating pip and installing its dependent packages ..."
+    python -m ensurepip --upgrade >/dev/null 2>&1 || true
+    python -m pip install --upgrade pip setuptools wheel
+
+    # Install python requirements from file.
+    REQ_FILE="$PROJECT_ROOT/requirements.txt"
+
+    if [ -f "$REQ_FILE" ]; then
+        echo "[$APP_NAME] Installing dependencies from $REQ_FILE ..."
+        python -m pip install -r "$REQ_FILE"
+    else
+        echo "[start] NOTE: $REQ_FILE file not found; Skipping dependencies installation."
+    fi
+else
+    # Activate Python Virtual Environment
+    # shellcheck disable=SC1091
+    echo "[$APP_NAME] Activating python virtual environment ..."
+    . "$VENV_DIR/bin/activate"
+fi
+# ------------------------------------------------------------------------------
+
+# Remove all __pycache__ directories (excluding .venv)
+# ------------------------------------------------------------------------------
+echo "[$APP_NAME] Clearing the project from __pycache__ directories ..."
+find "$PROJECT_ROOT" -type d -name "__pycache__" ! -path "$VENV_DIR/*" -exec rm -rf {} +
+# ------------------------------------------------------------------------------
+
+# Loading environment variables
+# ------------------------------------------------------------------------------
+if [ -f .env ]; then
+    set -a          # Automatically exports all variables.
+    source .env     # Loads variables into the environment.
+    set +a          # Disables auto-export.
+fi
+# ------------------------------------------------------------------------------
+
+# Optional: Run Django migrations if a Django app is present.
+# ------------------------------------------------------------------------------
+if [ -d control_service ] && [ -f control_service/manage.py ]; then
+    echo "[$APP_NAME] Running Django migrations ..."
+    pushd control_service > /dev/null       # Enters the control_service directory (where the Django project is located).
+    python manage.py migrate --noinput      # Starts database migration (creates/updates tables).
+    popd > /dev/null                        # Returns to the previous directory.
+fi
+# ------------------------------------------------------------------------------
+
+# Initialize Nginx configuration from script.
+# ------------------------------------------------------------------------------
+NGINX_IP="${NGINX_IP:-192.168.1.101}"
+
+if [ -f "$PROJECT_ROOT/scripts/init_nginx.sh" ]; then
+    echo "[$APP_NAME] Initializing nginx (IP: $NGINX_IP) ..."
+    bash "$PROJECT_ROOT/scripts/init_nginx.sh" "$NGINX_IP"
+fi
+# ------------------------------------------------------------------------------
+
+# Disable annoying pkg_resources deprecation warning (Python 3.13+)
+export PYTHONWARNINGS="ignore:pkg_resources is deprecated as an API:UserWarning"
+
+# Launching the supervisor – the supervisor service takes care of the rest
+echo
+echo "[$APP_NAME] Starting application ..."
+exec supervisord -n -c supervisord.conf
+```
+
+### `supervisord.conf`
+
+```text
+; Establishes a Unix socket for communication between supervisord and the supervisorctl tool (CLI client).
+; This allows you to control services (supervisorctl status, supervisorctl restart, etc.)
+[unix_http_server]
+file=/tmp/supervisor.sock
+
+[supervisord]
+loglevel=info                   ; debug|info|warn|error|critical
+logfile=./logs/supervisord.log  ; the main Supervisor log,
+logfile_maxbytes=50MB           ; Automatic rotation
+;logfile_backups=5              ; How many copies to keep
+pidfile=./logs/supervisord.pid  ; The PID record of the supervisord process,
+childlogdir=./logs              ; The directory containing the logs of individual programs.
+
+; Allows remote control of the Supervisor via RPC (e.g. supervisorctl).
+[rpcinterface:supervisor]
+supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+
+; Configure the supervisorctl client to use the same socket as supervisord.
+[supervisorctl]
+serverurl=unix:///tmp/supervisor.sock
+
+; === APPLICATIONS (MODULES) ===
+; [program:name]    ; Service name.
+; command           ; Determines what to run (usually Python in venv).
+; autostart         ; Specifies whether to start automatically when supervisord starts.
+; autorestart       ; Determines whether to restart the service if it crashes.
+; stopasgroup       ; This option causes all processes in the group to be stopped when the program is stopped (stop or autorestart).
+; killasgroup       ; If a process (and its children) do not gracefully terminate on the TERM signal, the Supervisor will force the entire group to terminate with the KILL signal.
+; priority          ; Determines the order in which services are started and stopped. By default, all are 999. Lower value, higher priority.
+; Logs into files:
+; stdout_logfile                ; Specifies the log files that the service prints to standard output (print, logging.info).
+; stderr_logfile                ; Specifies the log files that hit standard errors (logging.error, stacktrace).
+; stderr_logfile_maxbytes=10MB  ; Automatic rotation
+; stderr_logfile_backups=2      ; How many copies to keep
+; Output in console
+; stdout_logfile=/dev/stdout
+; stdout_logfile_maxbytes=0
+; environment=PYTHONUNBUFFERED="1"
+
+[program:supervisor_service]
+command=%(ENV_VIRTUAL_ENV)s/bin/python -u -m supervisor_service.app
+directory=%(here)s
+autostart=true
+autorestart=unexpected      ; Not True
+exitcodes=0                 ; Only 0 is the "expected" output
+startsecs=10                ; Process must survive 10 seconds to be considered a successful start
+startretries=3              ; After 3 failed attempts -> FATAL
+stopasgroup=true
+killasgroup=true
+priority=100
+stdout_logfile=./logs/supervisor_service.out
+stdout_logfile_maxbytes=0
+stderr_logfile=./logs/supervisor_service.err
+stderr_logfile_maxbytes=0
+environment=PYTHONUNBUFFERED="1"
+
+[program:auth_service]
+command=%(ENV_VIRTUAL_ENV)s/bin/python -u -m auth_service.app
+autostart=true
+autorestart=true
+stdout_logfile=./logs/auth_service.out
+stdout_logfile_maxbytes=0
+stderr_logfile=./logs/auth_service.err
+stderr_logfile_maxbytes=0
+environment=PYTHONUNBUFFERED="1"
+
+[program:email_service]
+command=%(ENV_VIRTUAL_ENV)s/bin/python -u -m email_service.app
+autostart=true
+autorestart=true
+stdout_logfile=./logs/email_service.out
+stdout_logfile_maxbytes=0
+stderr_logfile=./logs/email_service.err
+stderr_logfile_maxbytes=0
+environment=PYTHONUNBUFFERED="1"
+
+[program:info_service]
+command=%(ENV_VIRTUAL_ENV)s/bin/python -u -m info_service.app
+autostart=true
+autorestart=true
+stdout_logfile=./logs/info_service.out
+stdout_logfile_maxbytes=0
+stderr_logfile=./logs/info_service.err
+stderr_logfile_maxbytes=0
+environment=PYTHONUNBUFFERED="1"
+
+[program:io_service]
+command=%(ENV_VIRTUAL_ENV)s/bin/python -u -m io_service.app
+autostart=true
+autorestart=true
+stdout_logfile=./logs/io_service.out
+stdout_logfile_maxbytes=0
+stderr_logfile=./logs/io_service.err
+stderr_logfile_maxbytes=0
+environment=PYTHONUNBUFFERED="1"
+
+[program:control_service]
+command=%(ENV_VIRTUAL_ENV)s/bin/gunicorn control_site.wsgi:application --chdir %(here)s/control_service --workers 2 --bind 127.0.0.1:8080
+autostart=true
+autorestart=true
+stdout_logfile=./logs/control_service.out
+stdout_logfile_maxbytes=0
+stderr_logfile=./logs/control_service.err
+stderr_logfile_maxbytes=0
+environment=PYTHONUNBUFFERED="1",GUNICORN_CMD_ARGS="--access-logfile - --error-logfile - --capture-output --enable-stdio-inheritance"
+
+[group:RaspberryPiSystem]
+programs=supervisor_service,auth_service,email_service,info_service,io_service,control_service
+
+; Event listeners (event response logic)
+; The eventlistener is a process that listens for Supervisor events.
+
+[eventlistener:event_listener]
+command=%(ENV_VIRTUAL_ENV)s/bin/python ./supervisor_service/listeners/event_listener.py
+events=PROCESS_STATE, SUPERVISOR_STATE_CHANGE
+environment=PYTHONPATH=%(here)s,PYTHONUNBUFFERED="1"
+autorestart=true
+; Specifies the maximum buffer size (in bytes) in which Supervisor keeps communication data between supervisord and the listener. 
+; The default is 64 KB (65536).
+buffer_size=1024
+stdout_logfile=/dev/null
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0   ; important: turn off rotation, otherwise "Illegal seek"
+```
+
+### `.env.example`
+
+```text
+AUTH_SECRET=0vZ_Ms5UDZKq18dyz8v4Jeuhd_A1gM9Yq8-ShmbqU0CxmriG1nTCzvXcQuB3VoRkG9j1-2LtOI8GxvSTm0I3NA
+DJANGO_SECRET=0vZ_Ms5UDZKq18dyz8v4Jeuhd_A1gM9Yq8-ShmbqU0CxmriG1nTCzvXcQuB3VoRkG9j1-2LtOI8GxvSTm0I3NA
+SMTP_HOST=localhost
+SMTP_PORT=25
+SMTP_FROM=pi@example.local
+```
 
 ### `auth_service/app.py`
 
@@ -805,192 +1056,4 @@ class AuthGuard:
 
     # endregion --- Role Helpers ---
     
-```
-
-### `nginx/pi_stack.conf`
-
-```text
-# Redirect all HTTP traffic to HTTPS.
-server {
-    listen 80;                              # Listen on port 80 (HTTP)
-    server_name 192.168.1.101;              # Server IP (can be replaced with domain)
-    return 301 https://$host$request_uri;   # Permanent redirect to HTTPS version of the requested URL
-}
-
-# Main HTTPS server configuration
-server {
-    listen 443 ssl;             # Listen on port 443 (HTTPS) 
-    http2 on;                   # with HTTP/2
-    server_name 192.168.1.101;  # Server IP (used for virtual hosting)
-
-    # SSL certificate and key paths
-    ssl_certificate     /etc/ssl/pi_stack/fullchain.pem;    # Full certificate chain
-    ssl_certificate_key /etc/ssl/pi_stack/privkey.pem;      # Private key
-
-    # Default location - reverse proxy to the main web app running on port 8080
-    location / {
-        return 302 /control/;
-    }
-
-    # location / {
-    #     proxy_pass http://127.0.0.1:8080/;                              # Forward requests to local service on port 8080
-    #     proxy_set_header Host $host;                                    # Preserve original host header
-    #     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;    # Forward client IP
-    #     proxy_set_header X-Forwarded-Proto https;                       # Indicate the original protocol is HTTPS
-    # }
-
-    # Reverse proxy for specific websites:
-    location /control/ {
-        proxy_pass http://127.0.0.1:8080/;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Proto https;
-    }
-
-    location /api/supervisor/ {
-        proxy_pass http://127.0.0.1:5001;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Proto https;
-        proxy_set_header X-Forwarded-Prefix /api/auth;
-    }
-
-    location /api/auth/ {
-        proxy_pass http://127.0.0.1:5002;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Prefix /api/auth;
-    }
-
-    location /api/email/ {
-        proxy_pass http://127.0.0.1:5003;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Prefix /api/email;
-    }
-
-    location /api/info/ {
-        proxy_pass http://127.0.0.1:5004;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Prefix /api/info;
-    }
-
-    location /api/io/ {
-        proxy_pass http://127.0.0.1:5005;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Prefix /api/io;
-    }
-}
-```
-
-### `supervisor_service/app.py`
-
-```text
-from flask import Flask, jsonify, request
-from flasgger import Swagger
-from .config import BIND, PORT
-from .process_manager import ProcessManager
-from .swagger import SWAGGER_CONFIG
-
-# Initialize Flask app
-app = Flask(__name__)
-pm = ProcessManager()
-
-@app.get('/api/processes')
-def get_processes():
-    return jsonify(pm.list_processes())
-
-@app.post('/api/processes/<name>/start')
-def start_process(name: str):
-    return jsonify(pm.start(name))
-
-@app.post('/api/processes/<name>/stop')
-def stop_process(name: str):
-    return jsonify(pm.stop(name))
-
-@app.post('/api/processes/<name>/restart')
-def restart_process(name: str):
-    return jsonify(pm.restart(name))
-
-@app.post('/api/stop_all')
-def stop_all():
-    return jsonify(pm.stop_all())
-
-# Initialize Swagger using the external configuration
-swagger = Swagger(app, config=SWAGGER_CONFIG)
-
-# Run the service
-if __name__ == '__main__':
-    app.run(host=BIND, port=PORT)
-
-```
-
-### `supervisor_service/config.py`
-
-```text
-import os
-
-SUPERVISOR_URL = os.getenv('SUPERVISOR_URL', 'http://127.0.0.1:9001/RPC2')
-BIND = os.getenv('SUPERVISOR_SERVICE_BIND', '0.0.0.0')
-PORT = int(os.getenv('SUPERVISOR_SERVICE_PORT', '5001'))
-
-```
-
-### `supervisor_service/swagger.py`
-
-```text
-SERVICE_NAME = 'supervisor'
-SWAGGER_TITLE = 'Supervisor Service API'
-
-SWAGGER_TEMPLATE = {
-    'openapi': '3.0.3',
-    'info': {
-        'title': SWAGGER_TITLE,
-        'version': '1.0.0',
-        'description': (
-            'Raspberry PI microservice software management service.\n'
-        )
-    },
-    'components': {
-        'securitySchemes': {
-            # Bearer token definition for Authorization header
-            'BearerAuth': {
-                'type': 'http',
-                'scheme': 'bearer',
-                'bearerFormat': 'JWT',  # UI shows a token input field
-                'description': 'Enter your access token without the \'Bearer \' prefix.'
-            }
-        }
-    },
-    # Global rule — all endpoints require BearerAuth,
-    # individual endpoints (e.g., /login) can override it with `security: []`
-    'security': [{'BearerAuth': []}],
-}
-
-SWAGGER_CONFIG = {
-    'openapi': '3.0.3',
-    'swagger_ui': True,
-    'headers': [],
-
-    # Define where the JSON spec will be served
-    'specs': [
-        {
-            'endpoint': 'apispec',
-            'route': f'/api/{SERVICE_NAME}/apispec.json',   # Full path (must include the prefix)
-            'rule_filter': lambda rule: rule.rule.startswith(f'/api/{SERVICE_NAME}/'),
-            'model_filter': lambda tag: True,
-        }
-    ],
-
-    # Define where Swagger UI will be served
-    'specs_route': f'/api/{SERVICE_NAME}/apidocs/',
-    'static_url_path': f'/api/{SERVICE_NAME}/flasgger_static',
-
-    # UI meta
-    'title': SWAGGER_TITLE,
-    'uiversion': 3,
-
-    'config': {
-        # Remember entered authorization across refreshes
-        'persistAuthorization': True,
-        # Optional: collapse models for clarity
-        'docExpansion': 'none'
-    },
-}
 ```

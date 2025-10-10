@@ -12,6 +12,33 @@ APP_NAME="$(basename -- "${PROJECT_ROOT%/}")"
 
 cd "$PROJECT_ROOT"
 
+# Parse arguments
+# ------------------------------------------------------------------------------
+DEPLOYMENT="dev"
+
+while [[ "${1-}" != "" ]]; do
+    case "$1" in
+        -d|--deployment)
+            if [[ "${2-}" == "" ]]; then
+                echo "[$APP_NAME] Missing value for --deployment (use: dev|test|prod)."
+                exit 2
+            fi
+            DEPLOYMENT="$2"
+            shift 2
+            ;;
+        -h|--help)
+            echo "Usage: $0 [--deployment dev|test|prod]"
+            exit 0
+            ;;
+        *)
+            echo "[$APP_NAME] Unknown parameter: $1"
+            echo "Usage: $0 [--deployment dev|test|prod]"
+            exit 1
+            ;;
+    esac
+done
+# ------------------------------------------------------------------------------
+
 # Clear supervisor and service logs
 # ------------------------------------------------------------------------------
 echo "[$APP_NAME] Clearing supervisor and services logs ..."
@@ -51,7 +78,7 @@ if [ ! -d "$VENV_DIR" ]; then
         echo "[$APP_NAME] Installing dependencies from $REQ_FILE ..."
         python -m pip install -r "$REQ_FILE"
     else
-        echo "[start] NOTE: $REQ_FILE file not found; Skipping dependencies installation."
+        echo "[$APP_NAME] NOTE: $REQ_FILE file not found; Skipping dependencies installation."
     fi
 else
     # Activate Python Virtual Environment
@@ -69,10 +96,22 @@ find "$PROJECT_ROOT" -type d -name "__pycache__" ! -path "$VENV_DIR/*" -exec rm 
 
 # Loading environment variables
 # ------------------------------------------------------------------------------
-if [ -f .env ]; then
-    set -a          # Automatically exports all variables.
-    source .env     # Loads variables into the environment.
-    set +a          # Disables auto-export.
+# Map deployment to .env filename
+case "$DEPLOYMENT" in
+    dev)   ENV_FILE=".env.dev"  ;;
+    test)  ENV_FILE=".env.test" ;;
+    prod)  ENV_FILE=".env"      ;;
+    *)     ENV_FILE=".env.dev"  ;;
+esac
+
+if [ -f "$ENV_FILE" ]; then
+    echo "[$APP_NAME] Loading environment from $ENV_FILE ..."
+    set -a              # Automatically exports all variables.
+    # shellcheck disable=SC1090
+    source "$ENV_FILE"  # Loads variables into the environment.
+    set +a              # Disables auto-export.
+else
+    echo "[$APP_NAME] NOTE: Environment file $ENV_FILE not found! Skipping ..."
 fi
 # ------------------------------------------------------------------------------
 

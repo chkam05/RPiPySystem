@@ -30,15 +30,14 @@ MAX_DEPTH="${MAX_DEPTH:-3}"
 
 # Provide files (space or newline separated) to embed fully in the MD.
 # EXTRA_MD_FILES="${EXTRA_MD_FILES:-}"
-EXTRA_MD_FILES="./auth_service/app.py \
+EXTRA_MD_FILES="./launch.sh\
+    ./supervisord.conf \
+    ./.env.example \
+    ./auth_service/app.py \
     ./auth_service/config.py \
     ./auth_service/swagger.py \
     ./auth_service/controllers/sessions.py \
-    ./auth_service/utils/auth_guard.py \
-    ./nginx/pi_stack.conf \
-    ./supervisor_service/app.py \
-    ./supervisor_service/config.py \
-    ./supervisor_service/swagger.py"
+    ./auth_service/utils/auth_guard.py"
 # -----------------------------------------------------------------------------
 
 # Build a sanitized array of absolute paths for --extra
