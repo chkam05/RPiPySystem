@@ -1,64 +1,35 @@
-import json
-import os
-import tempfile
-import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, ClassVar, Dict, List, Optional
 from werkzeug.security import generate_password_hash, check_password_hash
+import uuid
 
+from auth_service.config import DEFAULT_USERS
+from auth_service.models.access_level import AccessLevel
 from auth_service.models.user import User
-from auth_service.config import db_path, DEFAULT_USERS, USERS_STORAGE_NAME
+from utils.base_json_storage import BaseJsonStorage
 
 
-class UsersStorage:
-    KEY_USERS: str = 'users'
+class UsersStorage(BaseJsonStorage):
+    KEY_USERS: ClassVar[str] = 'users'
 
-    def __init__(self, path: str | None = None) -> None:
-        self.db_path = path or db_path(USERS_STORAGE_NAME)
-
-        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
-
-        if not os.path.exists(self.db_path):
-            self._atomic_write(self._build_initial_data())
-
-    # region --- FileSystem Helpers ---
+    def __init__(self, path: str | None, *, enable_cache: bool = True) -> None:
+        super().__init__(path, enable_cache=enable_cache)
 
     def _build_initial_data(self) -> Dict[str, Any]:
-        users: List[Dict[str, Any]] = []
-        for u in DEFAULT_USERS:
-            item = dict(u)
-            item.setdefault(User.FIELD_ID, str(uuid.uuid4()))
-            item.setdefault(User.FIELD_LEVEL, User.LEVEL_USER)
-            users.append(item)
-        return {self.KEY_USERS: users}
-
-    def _read(self) -> Dict[str, Any]:
-        try:
-            with open(self.db_path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except FileNotFoundError:
-            return self._build_initial_data()
-
-    def _atomic_write(self, data: Dict[str, Any]) -> None:
-        dirpath = os.path.dirname(self.db_path) or "."
-        with tempfile.NamedTemporaryFile("w", delete=False, dir=dirpath, encoding="utf-8") as tf:
-            json.dump(data, tf, ensure_ascii=False, indent=2)
-            tmp_name = tf.name
-        os.replace(tmp_name, self.db_path)
+        return {self.KEY_USERS: [u.copy() for u in DEFAULT_USERS]}
     
-    # endregion --- FileSystem Helpers ---
+    # --- Users CRUD methods ---
 
-    # region --- Users CRUD ---
-
-    def add_user(self, name: str, raw_password: str, *, level: str = User.LEVEL_USER) -> User:
+    def add_user(self, name: str, raw_password: str, *, level: str = AccessLevel.USER.value) -> User:
         if self.get_by_name(name):
             raise ValueError('user_exists')
         
-        uid = str(uuid.uuid4())
-        pwd_hash = generate_password_hash(raw_password)
-
-        user = User(id=uid, name=name, password_hash=pwd_hash, level=level)
         blob = self._read()
         users = blob.setdefault(self.KEY_USERS, [])
+        
+        uid = str(uuid.uuid4())
+        pwd_hash = generate_password_hash(raw_password)
+        user = User(id=uid, name=name, password_hash=pwd_hash, level=AccessLevel.from_str(level))
+        
         users.append(user.to_dict())
         self._atomic_write(blob)
         return user
@@ -77,17 +48,19 @@ class UsersStorage:
 
     def list_users(self) -> List[User]:
         blob = self._read()
-        return [User.from_dict(u) for u in blob.get(self.KEY_USERS, [])]
+        users = blob.get(self.KEY_USERS, [])
+        return [User.from_dict(u) for u in users]
 
     def remove_user(self, uid: str) -> bool:
         blob = self._read()
         users = blob.get(self.KEY_USERS, [])
-        new_users = [u for u in users if u.get(User.FIELD_ID) != uid]
 
-        if len(new_users) == len(users):
+        match_users = [u for u in users if u.get(User.FIELD_ID) != uid]
+
+        if len(match_users) == len(users):
             return False
         
-        blob[self.KEY_USERS] = new_users
+        blob[self.KEY_USERS] = match_users
         self._atomic_write(blob)
         return True
 
@@ -117,23 +90,18 @@ class UsersStorage:
             current[User.FIELD_PASSWORD_HASH] = generate_password_hash(raw_password)
         
         if level is not None:
-            if level not in User.get_levels():
-                raise ValueError('invalid_level')
-            current[User.FIELD_LEVEL] = level
+            access_level = AccessLevel.from_str(level)
+            current[User.FIELD_LEVEL] = access_level
 
         users[idx] = current
         blob[self.KEY_USERS] = users
         self._atomic_write(blob)
         return User.from_dict(current)
 
-    # endregion --- Users CRUD ---
-
-    # region --- Auth Helper ---
+    # --- Authentication Helper methods ---
 
     def verify_credentials(self, name: str, raw_password: str) -> Optional[User]:
         user = self.get_user_by_name(name)
         if user and check_password_hash(user.password_hash, raw_password):
             return user
         return None
-
-    # endregion --- Auth Helper ---

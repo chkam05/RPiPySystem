@@ -15,27 +15,30 @@ _Ten plik gromadzi minimalny kontekst potrzebny do kontynuacji pracy nad projekt
 Katalog główny: /opt/RPiPySystem
   📁 .gpt/
     📄 context_generator.py  (16 KB)
-    📄 context_generator.sh  (3 KB)
+    📄 context_generator.sh  (2 KB)
   📁 auth_service/
     📁 controllers/
-      📄 health.py  (1 KB)
-      📄 sessions.py  (11 KB)
-      📄 users.py  (9 KB)
+      📄 health_controller.py  (1 KB)
+      📄 sessions_controller.py  (9 KB)
+      📄 users_controller.py  (10 KB)
     📁 db/
-      📄 sessions.json  (3 KB)
+      📄 sessions.json  (0 KB)
       📄 users.json  (0 KB)
     📁 models/
-      📄 access_token_payload.py  (2 KB)
-      📄 refresh_token_payload.py  (1 KB)
+      📄 access_level.py  (1 KB)
+      📄 access_token.py  (3 KB)
+      📄 refresh_token.py  (1 KB)
       📄 refresh_token_record.py  (1 KB)
+      📄 token_pair.py  (2 KB)
       📄 user.py  (3 KB)
     📁 storage/
-      📄 sessions_storage.py  (4 KB)
-      📄 users_storage.py  (4 KB)
+      📄 sessions_storage.py  (3 KB)
+      📄 users_storage.py  (3 KB)
     📁 utils/
       📄 auth_guard.py  (3 KB)
-    📄 app.py  (1 KB)
+    📄 app.py  (0 KB)
     📄 config.py  (1 KB)
+    📄 service.py  (2 KB)
     📄 swagger.py  (2 KB)
   📁 control_service/
     📁 control_site/
@@ -81,7 +84,8 @@ Katalog główny: /opt/RPiPySystem
     📄 auth_secret.key  (0 KB)
   📁 supervisor_service/
     📁 controllers/
-      📄 processes.py  (7 KB)
+      📄 health_controller.py  (1 KB)
+      📄 processes_controller.py  (8 KB)
     📁 listeners/
       📄 event_listener.py  (0 KB)
       📄 event_logger.py  (1 KB)
@@ -89,6 +93,19 @@ Katalog główny: /opt/RPiPySystem
       📄 rules.py  (4 KB)
     📁 models/
       📄 event_handler.py  (1 KB)
+    📁 utils/
+      📄 processes_manager.py  (2 KB)
+      📄 supervisor_proxy_factory.py  (1 KB)
+      📄 timeout_transport.py  (0 KB)
+    📄 app.py  (0 KB)
+    📄 config.py  (1 KB)
+    📄 service.py  (1 KB)
+    📄 swagger.py  (2 KB)
+  📁 supervisor_service_old/
+    📁 controllers/
+      📄 processes.py  (7 KB)
+    📁 listeners/
+    📁 models/
     📁 utils/
       📄 process_manager.py  (2 KB)
       📄 supervisor_proxy_factory.py  (2 KB)
@@ -100,16 +117,19 @@ Katalog główny: /opt/RPiPySystem
     📄 __init__.py  (0 KB)
     📄 auto_swag.py  (7 KB)
     📄 base_controller.py  (1 KB)
-    📄 security.py  (2 KB)
-  📄 .env.example  (0 KB)
+    📄 base_json_storage.py  (4 KB)
+    📄 flask_api_service.py  (3 KB)
+    📄 key_generator.py  (1 KB)
+    📄 security.py  (1 KB)
+  📄 .env.dev  (1 KB)
   📄 .gitignore  (5 KB)
-  📄 launch.sh  (4 KB)
+  📄 launch.sh  (5 KB)
   📄 LICENSE  (1 KB)
   📄 main.py  (0 KB)
-  📄 project_context.md  (30 KB)
+  📄 project_context.md  (35 KB)
   📄 README.md  (0 KB)
   📄 requirements.txt  (1 KB)
-  📄 supervisord.conf  (5 KB)
+  📄 supervisord.conf  (6 KB)
   📄 TODO.txt  (0 KB)
 ```
 
@@ -178,26 +198,6 @@ whitenoise==6.7.0
   logi: stdout=`./logs/auth_service.out`, stderr=`./logs/auth_service.err`
   
   env: PYTHONUNBUFFERED="1"
-- `email_service` → `%(ENV_VIRTUAL_ENV)s/bin/python -u -m email_service.app`
-  
-  logi: stdout=`./logs/email_service.out`, stderr=`./logs/email_service.err`
-  
-  env: PYTHONUNBUFFERED="1"
-- `info_service` → `%(ENV_VIRTUAL_ENV)s/bin/python -u -m info_service.app`
-  
-  logi: stdout=`./logs/info_service.out`, stderr=`./logs/info_service.err`
-  
-  env: PYTHONUNBUFFERED="1"
-- `io_service` → `%(ENV_VIRTUAL_ENV)s/bin/python -u -m io_service.app`
-  
-  logi: stdout=`./logs/io_service.out`, stderr=`./logs/io_service.err`
-  
-  env: PYTHONUNBUFFERED="1"
-- `control_service` → `%(ENV_VIRTUAL_ENV)s/bin/gunicorn control_site.wsgi:application --chdir %(here)s/control_service --workers 2 --bind 127.0.0.1:8080`
-  
-  logi: stdout=`./logs/control_service.out`, stderr=`./logs/control_service.err`
-  
-  env: PYTHONUNBUFFERED="1", GUNICORN_CMD_ARGS="--access-logfile - --error-logfile - --capture-output --enable-stdio-inheritance"
 
 
 **Nasłuchiwacze zdarzeń**:
@@ -240,18 +240,18 @@ whitenoise==6.7.0
 
 ## Wykryte serwisy
 
-- `auth_service` → flask
+- `auth_service` → unknown
 - `control_service` → django
 - `email_service` → flask
 - `info_service` → flask
 - `io_service` → flask
-- `supervisor_service` → flask
+- `supervisor_service` → unknown
 
 
 
 ## Klucze konfiguracyjne (tylko nazwy)
 
-- `auth_service/config.py`: ACCESS_TOKEN_SECONDS, BIND, DB_DIR, DEFAULT_ROOT_ID, DEFAULT_USERS, PORT, REFRESH_TOKEN_SECONDS, SECRET, SESSIONS_STORAGE_NAME, USERS_STORAGE_NAME
+- `auth_service/config.py`: ACCESS_TOKEN_SECONDS, API_ENDPOINT, DEFAULT_ROOT_ID, DEFAULT_USERS, HOST, PORT, REFRESH_TOKEN_SECONDS, SECRET, SERVICE_NAME, SESSIONS_STORAGE_PATH, SWAGGER_DESCRIPTION, SWAGGER_TITLE, USERS_STORAGE_PATH
 
 
 - `email_service/config.py`: BIND, PORT, SECRET, SMTP_FROM, SMTP_HOST, SMTP_PORT
@@ -263,7 +263,7 @@ whitenoise==6.7.0
 - `io_service/config.py`: BIND, PORT, SECRET
 
 
-- `supervisor_service/config.py`: AUTH_BASE_URL, AUTH_VALIDATION_ENDPOINT, BIND, PORT, SUPERVISOR_PASS, SUPERVISOR_TIMEOUT, SUPERVISOR_URL, SUPERVISOR_USER
+- `supervisor_service/config.py`: API_ENDPOINT, AUTH_URL, HOST, PORT, SERVICE_NAME, SOC_PASS, SOC_TIMEOUT, SOC_URL, SOC_USER, SWAGGER_DESCRIPTION, SWAGGER_TITLE
 
 
 
@@ -285,6 +285,33 @@ PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd -P)"
 APP_NAME="$(basename -- "${PROJECT_ROOT%/}")"
 
 cd "$PROJECT_ROOT"
+
+# Parse arguments
+# ------------------------------------------------------------------------------
+DEPLOYMENT="dev"
+
+while [[ "${1-}" != "" ]]; do
+    case "$1" in
+        -d|--deployment)
+            if [[ "${2-}" == "" ]]; then
+                echo "[$APP_NAME] Missing value for --deployment (use: dev|test|prod)."
+                exit 2
+            fi
+            DEPLOYMENT="$2"
+            shift 2
+            ;;
+        -h|--help)
+            echo "Usage: $0 [--deployment dev|test|prod]"
+            exit 0
+            ;;
+        *)
+            echo "[$APP_NAME] Unknown parameter: $1"
+            echo "Usage: $0 [--deployment dev|test|prod]"
+            exit 1
+            ;;
+    esac
+done
+# ------------------------------------------------------------------------------
 
 # Clear supervisor and service logs
 # ------------------------------------------------------------------------------
@@ -325,7 +352,7 @@ if [ ! -d "$VENV_DIR" ]; then
         echo "[$APP_NAME] Installing dependencies from $REQ_FILE ..."
         python -m pip install -r "$REQ_FILE"
     else
-        echo "[start] NOTE: $REQ_FILE file not found; Skipping dependencies installation."
+        echo "[$APP_NAME] NOTE: $REQ_FILE file not found; Skipping dependencies installation."
     fi
 else
     # Activate Python Virtual Environment
@@ -343,10 +370,22 @@ find "$PROJECT_ROOT" -type d -name "__pycache__" ! -path "$VENV_DIR/*" -exec rm 
 
 # Loading environment variables
 # ------------------------------------------------------------------------------
-if [ -f .env ]; then
-    set -a          # Automatically exports all variables.
-    source .env     # Loads variables into the environment.
-    set +a          # Disables auto-export.
+# Map deployment to .env filename
+case "$DEPLOYMENT" in
+    dev)   ENV_FILE=".env.dev"  ;;
+    test)  ENV_FILE=".env.test" ;;
+    prod)  ENV_FILE=".env"      ;;
+    *)     ENV_FILE=".env.dev"  ;;
+esac
+
+if [ -f "$ENV_FILE" ]; then
+    echo "[$APP_NAME] Loading environment from $ENV_FILE ..."
+    set -a              # Automatically exports all variables.
+    # shellcheck disable=SC1090
+    source "$ENV_FILE"  # Loads variables into the environment.
+    set +a              # Disables auto-export.
+else
+    echo "[$APP_NAME] NOTE: Environment file $ENV_FILE not found! Skipping ..."
 fi
 # ------------------------------------------------------------------------------
 
@@ -441,55 +480,70 @@ environment=PYTHONUNBUFFERED="1"
 [program:auth_service]
 command=%(ENV_VIRTUAL_ENV)s/bin/python -u -m auth_service.app
 autostart=true
-autorestart=true
+autorestart=unexpected      ; Not True
+exitcodes=0                 ; Only 0 is the "expected" output
+startsecs=10                ; Process must survive 10 seconds to be considered a successful start
+startretries=3              ; After 3 failed attempts -> FATAL
 stdout_logfile=./logs/auth_service.out
 stdout_logfile_maxbytes=0
 stderr_logfile=./logs/auth_service.err
 stderr_logfile_maxbytes=0
 environment=PYTHONUNBUFFERED="1"
 
-[program:email_service]
-command=%(ENV_VIRTUAL_ENV)s/bin/python -u -m email_service.app
-autostart=true
-autorestart=true
-stdout_logfile=./logs/email_service.out
-stdout_logfile_maxbytes=0
-stderr_logfile=./logs/email_service.err
-stderr_logfile_maxbytes=0
-environment=PYTHONUNBUFFERED="1"
+;[program:email_service]
+;command=%(ENV_VIRTUAL_ENV)s/bin/python -u -m email_service.app
+;autostart=true
+;autorestart=unexpected      ; Not True
+;exitcodes=0                 ; Only 0 is the "expected" output
+;startsecs=10                ; Process must survive 10 seconds to be considered a successful start
+;startretries=3              ; After 3 failed attempts -> FATAL
+;stdout_logfile=./logs/email_service.out
+;stdout_logfile_maxbytes=0
+;stderr_logfile=./logs/email_service.err
+;stderr_logfile_maxbytes=0
+;environment=PYTHONUNBUFFERED="1"
 
-[program:info_service]
-command=%(ENV_VIRTUAL_ENV)s/bin/python -u -m info_service.app
-autostart=true
-autorestart=true
-stdout_logfile=./logs/info_service.out
-stdout_logfile_maxbytes=0
-stderr_logfile=./logs/info_service.err
-stderr_logfile_maxbytes=0
-environment=PYTHONUNBUFFERED="1"
+;[program:info_service]
+;command=%(ENV_VIRTUAL_ENV)s/bin/python -u -m info_service.app
+;autostart=true
+;autorestart=unexpected      ; Not True
+;exitcodes=0                 ; Only 0 is the "expected" output
+;startsecs=10                ; Process must survive 10 seconds to be considered a successful start
+;startretries=3              ; After 3 failed attempts -> FATAL
+;stdout_logfile=./logs/info_service.out
+;stdout_logfile_maxbytes=0
+;stderr_logfile=./logs/info_service.err
+;stderr_logfile_maxbytes=0
+;environment=PYTHONUNBUFFERED="1"
 
-[program:io_service]
-command=%(ENV_VIRTUAL_ENV)s/bin/python -u -m io_service.app
-autostart=true
-autorestart=true
-stdout_logfile=./logs/io_service.out
-stdout_logfile_maxbytes=0
-stderr_logfile=./logs/io_service.err
-stderr_logfile_maxbytes=0
-environment=PYTHONUNBUFFERED="1"
+;[program:io_service]
+;command=%(ENV_VIRTUAL_ENV)s/bin/python -u -m io_service.app
+;autostart=true
+;autorestart=unexpected      ; Not True
+;exitcodes=0                 ; Only 0 is the "expected" output
+;startsecs=10                ; Process must survive 10 seconds to be considered a successful start
+;startretries=3              ; After 3 failed attempts -> FATAL
+;stdout_logfile=./logs/io_service.out
+;stdout_logfile_maxbytes=0
+;stderr_logfile=./logs/io_service.err
+;stderr_logfile_maxbytes=0
+;environment=PYTHONUNBUFFERED="1"
 
-[program:control_service]
-command=%(ENV_VIRTUAL_ENV)s/bin/gunicorn control_site.wsgi:application --chdir %(here)s/control_service --workers 2 --bind 127.0.0.1:8080
-autostart=true
-autorestart=true
-stdout_logfile=./logs/control_service.out
-stdout_logfile_maxbytes=0
-stderr_logfile=./logs/control_service.err
-stderr_logfile_maxbytes=0
-environment=PYTHONUNBUFFERED="1",GUNICORN_CMD_ARGS="--access-logfile - --error-logfile - --capture-output --enable-stdio-inheritance"
+;[program:control_service]
+;command=%(ENV_VIRTUAL_ENV)s/bin/gunicorn control_site.wsgi:application --chdir %(here)s/control_service --workers 2 --bind 127.0.0.1:8080
+;autostart=true
+;autorestart=unexpected      ; Not True
+;exitcodes=0                 ; Only 0 is the "expected" output
+;startsecs=10                ; Process must survive 10 seconds to be considered a successful start
+;startretries=3              ; After 3 failed attempts -> FATAL
+;stdout_logfile=./logs/control_service.out
+;stdout_logfile_maxbytes=0
+;stderr_logfile=./logs/control_service.err
+;stderr_logfile_maxbytes=0
+;environment=PYTHONUNBUFFERED="1",GUNICORN_CMD_ARGS="--access-logfile - --error-logfile - --capture-output --enable-stdio-inheritance"
 
-[group:RaspberryPiSystem]
-programs=supervisor_service,auth_service,email_service,info_service,io_service,control_service
+;[group:RaspberryPiSystem]
+;programs=supervisor_service,auth_service;,email_service,info_service,io_service,control_service
 
 ; Event listeners (event response logic)
 ; The eventlistener is a process that listens for Supervisor events.
@@ -507,553 +561,254 @@ stderr_logfile=/dev/stderr
 stderr_logfile_maxbytes=0   ; important: turn off rotation, otherwise "Illegal seek"
 ```
 
-### `.env.example`
+### `supervisor_service/controllers/processes_controller.py`
 
 ```text
-AUTH_SECRET=0vZ_Ms5UDZKq18dyz8v4Jeuhd_A1gM9Yq8-ShmbqU0CxmriG1nTCzvXcQuB3VoRkG9j1-2LtOI8GxvSTm0I3NA
-DJANGO_SECRET=0vZ_Ms5UDZKq18dyz8v4Jeuhd_A1gM9Yq8-ShmbqU0CxmriG1nTCzvXcQuB3VoRkG9j1-2LtOI8GxvSTm0I3NA
-SMTP_HOST=localhost
-SMTP_PORT=25
-SMTP_FROM=pi@example.local
-```
+from flask import jsonify, request
+from typing import ClassVar
+import requests
 
-### `auth_service/app.py`
-
-```text
-from flask import Flask
-from flasgger import Swagger
-import logging
-
-from .config import BIND, PORT, SECRET
-from .controllers.health import HealthController
-from .controllers.sessions import SessionsController
-from .controllers.users import UsersController
-from .swagger import SWAGGER_TEMPLATE, SWAGGER_CONFIG
-
-# Initialize Flask app
-app = Flask(__name__)
-
-# Configure Logger
-logging.basicConfig(
-    level=logging.INFO,
-    format='[%(asctime)s] [%(name)s] %(levelname)s: %(message)s'
-)
-logging.getLogger('werkzeug').setLevel(logging.INFO)
-
-app.config['SECRET_KEY'] = SECRET
-
-# Register blueprints
-app.register_blueprint(HealthController())
-app.register_blueprint(UsersController())
-app.register_blueprint(SessionsController())
-
-# Initialize Swagger using the external configuration
-swagger = Swagger(app, template=SWAGGER_TEMPLATE, config=SWAGGER_CONFIG)
-
-# Run the service
-if __name__ == '__main__':
-    app.run(host=BIND, port=PORT)
-
-```
-
-### `auth_service/config.py`
-
-```text
-import os
-import uuid
-from werkzeug.security import generate_password_hash
-from auth_service.models.user import User
-from utils.security import load_auth_secret
-
-BIND = os.getenv('AUTH_BIND', '127.0.0.1')
-PORT = int(os.getenv('AUTH_PORT', '5002'))
-
-# Directory for "db" files (created automatically)
-DB_DIR = os.getenv("AUTH_DB_DIR", "./auth_service/db")
-
-# Storage names - JSON file names
-USERS_STORAGE_NAME = "users"
-SESSIONS_STORAGE_NAME = "sessions"
-
-def db_path(storage_name: str) -> str:
-    os.makedirs(DB_DIR, exist_ok=True)
-    return os.path.join(DB_DIR, f"{storage_name}.json")
-
-# Secret for signing tokens (must exist)
-SECRET = load_auth_secret()
-
-# Token TTLs
-ACCESS_TOKEN_SECONDS = int(os.getenv("ACCESS_TOKEN_SECONDS", str(15 * 60)))
-REFRESH_TOKEN_SECONDS = int(os.getenv("REFRESH_TOKEN_SECONDS", str(30 * 24 * 3600)))
-
-# Default Users
-DEFAULT_ROOT_ID = str(uuid.uuid5(uuid.NAMESPACE_DNS, 'auth_service:root'))
-
-DEFAULT_USERS = [
-    {
-        User.FIELD_ID: DEFAULT_ROOT_ID,
-        User.FIELD_NAME: 'root',
-        User.FIELD_PASSWORD_HASH: generate_password_hash('password'),
-        User.FIELD_LEVEL: 'Root'
-    }
-]
-```
-
-### `auth_service/swagger.py`
-
-```text
-SERVICE_NAME = 'auth'
-SWAGGER_TITLE = 'Auth Service API'
-
-SWAGGER_TEMPLATE = {
-    'openapi': '3.0.3',
-    'info': {
-        'title': SWAGGER_TITLE,
-        'version': '1.0.0',
-        'description': (
-            'Authentication and user management service.\n'
-        )
-    },
-    'components': {
-        'securitySchemes': {
-            # Bearer token definition for Authorization header
-            'BearerAuth': {
-                'type': 'http',
-                'scheme': 'bearer',
-                'bearerFormat': 'JWT',  # UI shows a token input field
-                'description': 'Enter your access token without the \'Bearer \' prefix.'
-            }
-        }
-    },
-    # Global rule — all endpoints require BearerAuth,
-    # individual endpoints (e.g., /login) can override it with `security: []`
-    'security': [{'BearerAuth': []}],
-}
-
-SWAGGER_CONFIG = {
-    'openapi': '3.0.3',
-    'swagger_ui': True,
-    'headers': [],
-
-    # Define where the JSON spec will be served
-    'specs': [
-        {
-            'endpoint': 'apispec',
-            'route': f'/api/{SERVICE_NAME}/apispec.json',   # Full path (must include the prefix)
-            'rule_filter': lambda rule: rule.rule.startswith(f'/api/{SERVICE_NAME}/'),
-            'model_filter': lambda tag: True,
-        }
-    ],
-
-    # Define where Swagger UI will be served
-    'specs_route': f'/api/{SERVICE_NAME}/apidocs/',
-    'static_url_path': f'/api/{SERVICE_NAME}/flasgger_static',
-
-    # UI meta
-    'title': SWAGGER_TITLE,
-    'uiversion': 3,
-
-    'config': {
-        # Remember entered authorization across refreshes
-        'persistAuthorization': True,
-        # Optional: collapse models for clarity
-        'docExpansion': 'none'
-    },
-}
-```
-
-### `auth_service/controllers/sessions.py`
-
-```text
-import time
-import uuid
-from typing import Any, Dict, Optional
-from flask import request, jsonify
-from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
-
-from utils.auto_swag import auto_swag, ok, bad_request, unauthorized, request_body_json
+from auth_service.models.access_level import AccessLevel
+from supervisor_service.utils.processes_manager import ProcessesManager
+from utils.auto_swag import auto_swag, ok, unauthorized
 from utils.base_controller import BaseController
-
-from auth_service.models.user import User
-from auth_service.models.access_token_payload import AccessTokenPayload
-from auth_service.models.refresh_token_payload import RefreshTokenPayload
-from auth_service.storage.users_storage import UsersStorage
-from auth_service.storage.sessions_storage import SessionsStorage
-from auth_service.utils.auth_guard import AuthGuard
-from auth_service import config
+from utils.security import SecurityUtils
 
 
-class SessionsController(BaseController):
-    def __init__(
-            self,
-            *,
-            url_prefix: str = "/api/auth/session",
-            users: Optional[UsersStorage] = None,
-            sessions: Optional[SessionsStorage] = None) -> None:
-        self.users = users or UsersStorage()
-        self.sessions = sessions or SessionsStorage()
-        self.auth = AuthGuard(self.users)  # <— wspólna obsługa access tokenów
-        self.serializer = URLSafeTimedSerializer(config.SECRET, salt="auth-tokens")
-        self.ACCESS_TTL = getattr(config, "ACCESS_TOKEN_SECONDS", 15 * 60)
-        self.REFRESH_TTL = getattr(config, "REFRESH_TOKEN_SECONDS", 30 * 24 * 60 * 60)
-        super().__init__("auth_sessions", __name__, url_prefix=url_prefix)
+class ProcessesController(BaseController):
+    _CONTROLLER_NAME: ClassVar[str] = 'supervisor_processes'
+    _CONTROLLER_PATH: ClassVar[str] = 'processes'
 
-    # region --- Helper methods ---
+    def __init__(self, url_prefix_base: str, auth_url: str, processes_manager: ProcessesManager) -> None:
+        # Fields validation:
+        if not isinstance(url_prefix_base, str) or not url_prefix_base.strip():
+            raise ValueError('url_prefix_base is required')
+        if not isinstance(auth_url, str) or not auth_url.strip():
+            raise ValueError('auth_url is required')
+        if not processes_manager:
+            raise ValueError('processes_manager is required')
+        
+        url_prefix = self.join_prefix(url_prefix_base, self._CONTROLLER_PATH)
 
-    def _issue_tokens(self, user: User, *, prev_refresh_jti: Optional[str] = None) -> Dict[str, Any]:
-        # Generates a new access and refresh token (refresh rotated and stored in SessionsStorage).
-        # Returns a payload ready to be sent to the client.
-        now = int(time.time())
-
-        access_payload = AccessTokenPayload(
-            typ="access",
-            jti=str(uuid.uuid4()),
-            sub=user.id,
-            nam=user.name,
-            lvl=user.level,
-            iat=now,
-            exp=now + self.ACCESS_TTL,
-        ).to_dict()
-
-        refresh_payload = RefreshTokenPayload(
-            typ="refresh",
-            jti=str(uuid.uuid4()),
-            sub=user.id,
-            iat=now,
-            exp=now + self.REFRESH_TTL,
-        ).to_dict()
-
-        access_token = self.serializer.dumps(access_payload)
-        refresh_token = self.serializer.dumps(refresh_payload)
-
-        # Rejestr/rotacja refresh tokenów
-        self.sessions.rotate_refresh(prev_refresh_jti, refresh_payload["jti"], user.id, refresh_payload["exp"])
-
-        return {
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-            "token_type": "Bearer",
-            "expires_in": self.ACCESS_TTL,
-            "user": user.to_public(),
-        }
-
-    def _load_token(self, token: str, *, max_age: Optional[int] = None) -> Dict[str, Any]:
-        # Reads and verifies the token signature. Throws ValueError('expired'|'invalid') on errors.
-        try:
-            payload = self.serializer.loads(token, max_age=max_age)
-            return payload
-        except SignatureExpired:
-            raise ValueError("expired")
-        except BadSignature:
-            raise ValueError("invalid")
+        self._auth_url = auth_url
+        self._processes_manager = processes_manager
+        super().__init__(self._CONTROLLER_NAME, __name__, url_prefix)
     
-    def _read_bearer(self) -> Optional[str]:
-        # Gets the token from the Authorization: Bearer <token> header.
-        auth = request.headers.get("Authorization", "")
-        if not auth:
-            return None
-
-        # Normalize URL-encoded variant (some proxies/clients)
-        raw = auth.strip()
-        raw = raw.replace("Bearer%20", "Bearer ")
-
-        # Peel off any number of leading "Bearer " (handles 'Bearer Bearer <token>')
-        while raw.lower().startswith("bearer "):
-            raw = raw[7:].lstrip()
-
-        # Drop surrounding quotes if present
-        if (raw.startswith('"') and raw.endswith('"')) or (raw.startswith("'") and raw.endswith("'")):
-            raw = raw[1:-1].strip()
-
-        if not raw:
-            return None
-
-        return raw
-
-    # endregion --- Helper methods ---
-
-    @auto_swag(
-        tags=["auth"],
-        summary="Login — issue access & refresh tokens (Bearer)",
-        security=[],    # Public
-        request_body=request_body_json(
-            {
-                "type": "object",
-                "properties": {"name": {"type": "string"}, "password": {"type": "string"}},
-                "required": ["name", "password"]
-            }
-        ),
-        responses={
-            200: ok(
-                {
-                    "type": "object",
-                    "properties": {
-                        "access_token": {"type": "string"},
-                        "refresh_token": {"type": "string"},
-                        "token_type": {"type": "string", "example": "Bearer"},
-                        "expires_in": {"type": "integer", "example": 900},
-                        "user": User.schema_public()
-                    }
-                }
-            ),
-            401: unauthorized("Invalid credentials"),
-            400: bad_request("Invalid payload")
-        }
-    )
-    def login(self):
-        data = request.get_json(silent=True) or {}
-        name = data.get("name")
-        password = data.get("password")
-
-        if not isinstance(name, str) or not isinstance(password, str):
-            return jsonify({"message": "invalid payload"}), 400
-
-        user = self.users.verify_credentials(name, password)
-        if not user:
-            return jsonify({"message": "invalid credentials"}), 401
-
-        return jsonify(self._issue_tokens(user)), 200
-    
-    @auto_swag(
-        tags=["auth"],
-        summary="Refresh — rotate refresh token and issue new access token",
-        security=[],    # Public
-        request_body=request_body_json(
-            {
-                "type": "object",
-                "properties": {"refresh_token": {"type": "string"}},
-                "required": ["refresh_token"]
-            }
-        ),
-        responses={
-            200: ok(
-                {
-                    "type": "object",
-                    "properties": {
-                        "access_token": {"type": "string"},
-                        "refresh_token": {"type": "string"},
-                        "token_type": {"type": "string"},
-                        "expires_in": {"type": "integer"},
-                        "user": User.schema_public(),
-                    }
-                }
-            ),
-            401: unauthorized("Invalid or expired refresh token"),
-        }
-    )
-    def refresh(self):
-        data = request.get_json(silent=True) or {}
-        rtok = data.get("refresh_token")
-        if not isinstance(rtok, str) or not rtok:
-            return jsonify({"message": "invalid payload"}), 400
-
-        # Decode and verify refresh payload
-        try:
-            raw = self._load_token(rtok, max_age=self.REFRESH_TTL)
-            payload = RefreshTokenPayload.from_dict(raw)
-        except ValueError:
-            return jsonify({"message": "invalid or expired refresh token"}), 401
-
-        uid, jti = payload.sub, payload.jti
-
-        # Checking SessionsStorage (revoked/expired)
-        if not self.sessions.is_valid(jti, uid):
-            return jsonify({"message": "refresh token revoked or unknown"}), 401
-
-        user = self.users.get_by_id(uid)
-        if not user:
-            return jsonify({"message": "user not found"}), 401
-
-        out = self._issue_tokens(user, prev_refresh_jti=jti)
-        return jsonify(out), 200
-    
-    @auto_swag(
-        tags=["auth"],
-        summary="Validate access token (Authorization: Bearer)",
-        responses={
-            200: ok(
-                {
-                    "type": "object",
-                    "properties": {
-                        "valid": {"type": "boolean"},
-                        "user": User.schema_public(),
-                        "token": {"type": "object"}
-                    }
-                }
-            ),
-            401: unauthorized("Invalid or expired token"),
-        },
-    )
-    def validate(self):
-        try:
-            user, payload_model = self.auth.require_auth()
-        except PermissionError as e:
-            return jsonify({"message": "invalid or expired token"}), 401
-
-        return jsonify({"valid": True, "user": user.to_public(), "token": payload_model.to_dict()}), 200
-    
-    @auto_swag(
-        tags=["auth"],
-        summary="Logout — revoke provided refresh token (body or Authorization header)",
-        security=[],    # Public
-        request_body=request_body_json(
-            {
-                "type": "object",
-                "properties": {
-                    "refresh_token": {"type": "string"}
-                }
-            },
-            required=False
-        ),
-        responses={
-            200: ok(
-                {
-                    "type": "object",
-                    "properties": {
-                        "revoked": {"type": "boolean"}
-                    }
-                }
-            ),
-            401: unauthorized("Invalid refresh token")}
-    )
-    def logout(self):
-        # Prefer refresh_token from body and also allow Bearer (e.g. CLI clients)
-        data = request.get_json(silent=True) or {}
-        rtok = data.get("refresh_token") or self._read_bearer()
-        if not isinstance(rtok, str) or not rtok:
-            return jsonify({"message": "missing refresh token"}), 400
-
-        try:
-            raw = self._load_token(rtok, max_age=self.REFRESH_TTL)
-            payload = RefreshTokenPayload.from_dict(raw)
-        except ValueError:
-            return jsonify({"message": "invalid or expired refresh token"}), 401
-
-        # Idempotentnie — jeśli już nieważny, zwracamy sukces
-        if not self.sessions.is_valid(payload.jti, payload.sub):
-            return jsonify({"revoked": True}), 200
-
-        self.sessions.revoke(payload.jti)
-        return jsonify({"revoked": True}), 200
-    
-    @auto_swag(
-        tags=["auth"],
-        summary="Who am I — return current user from access token",
-        responses={
-            200: ok(User.schema_public()),
-            401: unauthorized("Invalid or missing token")
-        },
-    )
-    def me(self):
-        try:
-            user, _ = self.auth.require_auth()
-        except PermissionError as e:
-            return jsonify({"message": "invalid or expired token"}), 401
-
-        return jsonify(user.to_public()), 200
-    
-    # region --- Endpoint registration ---
-
-    def register_routes(self) -> "SessionsController":
-        self.add_url_rule("/login", view_func=self.login, methods=["POST"])
-        self.add_url_rule("/refresh", view_func=self.refresh, methods=["POST"])
-        self.add_url_rule("/validate", view_func=self.validate, methods=["POST"])
-        self.add_url_rule("/logout", view_func=self.logout, methods=["POST"])
-        self.add_url_rule("/me", view_func=self.me, methods=["GET"])
+    def register_routes(self) -> 'ProcessesController':
+        self.add_url_rule('/list', view_func=self.list_processes, methods=['GET'])
+        # self.add_url_rule('/<name>/start', view_func=self.start_process, methods=['POST'])
+        # self.add_url_rule('/<name>/stop', view_func=self.stop_process, methods=['POST'])
+        # self.add_url_rule('/<name>/restart', view_func=self.restart_process, methods=['POST'])
+        # self.add_url_rule('/stop_all', view_func=self.stop_all, methods=['POST'])
         return self
+    
+    # --- Authentication helper methods ---
 
-    # endregion --- Endpoint registration ---
+    def _require_root(self):
+        headers = SecurityUtils.bearer_headers_from_request()
+        
+        if not headers:
+            return False, {'message': 'missing bearer token'}, 401
 
+        try:
+            r = self.http.post(self._auth_url, headers=headers, timeout=3.0)
+        except requests.RequestException:
+            return False, {'message': 'auth service unreachable'}, 503
+
+        if r.status_code != 200:
+            return False, {'message': 'invalid or expired token'}, 401
+
+        try:
+            payload = r.json()
+            level = (payload.get('user') or {}).get('level')
+        except Exception:
+            return False, {'message': 'auth response malformed'}, 503
+
+        if level != AccessLevel.ROOT.value:
+            return False, {'message': 'forbidden: requires Root'}, 403
+
+        return True, None, 200
+    
+    # --- Utilities ---
+
+    def _exec(self, fn, *args, **kwargs):
+        try:
+            return jsonify(fn(*args, **kwargs)), 200
+        except RuntimeError as e:
+            return jsonify({'message': str(e)}), 503
+
+    # --- ENDPOINTS ---
+
+    @auto_swag(
+        tags=['processes'],
+        summary='List Supervisord Processes — Root Only',
+        description='Returns the status and basic metadata for all Supervisord-managed services in the microservice suite (Root required).',
+        responses={
+            200: ok(
+                {
+                    'type': 'array',
+                    'items': {
+                        'type': 'object',
+                        'properties': {
+                            'name': {'type': 'string'},
+                            'state': {'type': 'string'},
+                            'pid': {'type': 'integer', 'nullable': True},
+                        }
+                    }
+                }
+            ),
+            401: unauthorized('Missing/invalid token'),
+        },
+    )
+    def list_processes(self):
+        ok_, err, code = self._require_root()
+        if not ok_:
+            return jsonify(err), code
+        return self._exec(self.pm.list_processes)
+    
+    @auto_swag(
+        tags=['processes'],
+        summary='Start Supervisord Process — Root Only',
+        description='Starts the specified Supervisord-managed service if it is not already running (Root required).',
+        parameters=[{
+            'in': 'path',
+            'name': 'name',
+            'schema': {'type': 'string', 'example': 'service_name'},
+            'required': True,
+            'description': 'Service name'
+        }],
+        responses={
+            200: ok(
+                {
+                    'type': 'object',
+                    'properties': {
+                        'name': {'type': 'string'},
+                        'started': {'type': 'boolean'},
+                        'message': {'type': 'string'},
+                    },
+                }
+            ),
+            401: unauthorized('Missing/invalid token'),
+        },
+    )
+    def start_process(self, name: str):
+        ok_, err, code = self._require_root()
+        if not ok_:
+            return jsonify(err), code
+        return self._exec(self.pm.start, name)
+
+    @auto_swag(
+        tags=['processes'],
+        summary='Stop Supervisord Process — Root Only',
+        description='Stops the specified Supervisord-managed service gracefully (Root required).',
+        parameters=[{
+            'in': 'path',
+            'name': 'name',
+            'schema': {'type': 'string', 'example': 'service_name'},
+            'required': True,
+            'description': 'Service name'
+        }],
+        responses={
+            200: ok(
+                {
+                    'type': 'object',
+                    'properties': {
+                        'name': {'type': 'string'},
+                        'stopped': {'type': 'boolean'},
+                        'message': {'type': 'string'},
+                    },
+                }
+            ),
+            401: unauthorized('Missing/invalid token'),
+        },
+    )
+    def stop_process(self, name: str):
+        ok_, err, code = self._require_root()
+        if not ok_:
+            return jsonify(err), code
+        return self._exec(self.pm.stop, name)
+
+    @auto_swag(
+        tags=['processes'],
+        summary='Restart Supervisord Process — Root Only',
+        description='Restarts the specified Supervisord-managed service, stopping it if running and then starting it again (Root required).',
+        parameters=[{
+            'in': 'path',
+            'name': 'name',
+            'schema': {'type': 'string', 'example': 'service_name'},
+            'required': True,
+            'description': 'Service name'
+        }],
+        responses={
+            200: ok(
+                {
+                    'type': 'object',
+                    'properties': {
+                        'name': {'type': 'string'},
+                        'restarted': {'type': 'boolean'},
+                        'message': {'type': 'string'},
+                    },
+                }
+            ),
+            401: unauthorized('Missing/invalid token'),
+        },
+    )
+    def restart_process(self, name: str):
+        ok_, err, code = self._require_root()
+        if not ok_:
+            return jsonify(err), code
+        return self._exec(self.pm.restart, name)
+
+    @auto_swag(
+        tags=['processes'],
+        summary='Stop All Supervisord Processes — Root Only',
+        description='Stops all Supervisord-managed services in the microservice suite gracefully (Root required).',
+        responses={
+            200: ok(
+                {
+                    'type': 'object',
+                    'properties': {
+                        'stopped': {'type': 'integer', 'description': 'How many were stopped'}
+                    },
+                }
+            ),
+            401: unauthorized('Missing/invalid token'),
+        },
+    )
+    def stop_all(self):
+        ok_, err, code = self._require_root()
+        if not ok_:
+            return jsonify(err), code
+        return self._exec(self.pm.stop_all)
 ```
 
-### `auth_service/utils/auth_guard.py`
+### `utils/base_controller.py`
 
 ```text
-from typing import Optional, Tuple, Dict, Any
-from flask import request
-from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+from abc import ABC, abstractmethod
+from flask import Blueprint
 
-from auth_service.models.user import User
-from auth_service.models.access_token_payload import AccessTokenPayload
-from auth_service.storage.users_storage import UsersStorage
-from auth_service import config
-
-
-class AuthGuard:
-    def __init__(self, users: Optional[UsersStorage] = None) -> None:
-        self.users = users or UsersStorage()
-        self.serializer = URLSafeTimedSerializer(config.SECRET, salt="auth-tokens")
-        self.ACCESS_TTL = getattr(config, "ACCESS_TOKEN_SECONDS", 15 * 60)
+class BaseController(Blueprint):
     
-    # region --- Token helper methods ---
+    def __init__(self, name: str, import_name: str, url_prefix: str) -> None:
+        # Prefix normalization
+        if not url_prefix.startswith('/'):
+            url_prefix = '/' + url_prefix
 
-    @staticmethod
-    def read_bearer() -> Optional[str]:
-        # Gets the token from the Authorization: Bearer <token> header.
-        auth = request.headers.get("Authorization", "")
-        if not auth:
-            return None
-
-        # Normalize URL-encoded variant (some proxies/clients)
-        raw = auth.strip()
-        raw = raw.replace("Bearer%20", "Bearer ")
-
-        # Peel off any number of leading "Bearer " (handles 'Bearer Bearer <token>')
-        while raw.lower().startswith("bearer "):
-            raw = raw[7:].lstrip()
-
-        # Drop surrounding quotes if present
-        if (raw.startswith('"') and raw.endswith('"')) or (raw.startswith("'") and raw.endswith("'")):
-            raw = raw[1:-1].strip()
-
-        return raw or None
+        super().__init__(name, import_name, url_prefix=url_prefix)
+        # Auto-register routes defined by subclasses
+        # Subclass should override register_routes() and call add_url_rule(...)
+        self.register_routes()
     
-    def load_access(self, token: str) -> Dict[str, Any]:
-        # Decodes and validates an access token, returning a payload (dict).
-        # Throws ValueError('expired'|'invalid') on error.
-        try:
-            return self.serializer.loads(token, max_age=self.ACCESS_TTL)
-        except SignatureExpired:
-            raise ValueError("expired")
-        except BadSignature:
-            raise ValueError("invalid")
-    
-    def require_auth(self) -> Tuple[User, AccessTokenPayload]:
-        # Requires a valid access token.
-        # Returns: (User, AccessTokenPayload)
-        # Throws PermissionError if unauthorized.
-        atok = self.read_bearer()
-        if not atok:
-            raise PermissionError("missing bearer")
-
-        try:
-            raw = self.load_access(atok)
-            payload = AccessTokenPayload.from_dict(raw)
-        except Exception as e:
-            raise PermissionError("invalid token")
-
-        actor = self.users.get_user_by_id(payload.sub)
-        if not actor:
-            raise PermissionError("user not found")
-
-        return actor, payload
-
-    # endregion --- Token helper methods ---
-
-    # region --- Role Helpers ---
-
     @staticmethod
-    def is_root(user: User) -> bool:
-        return user.level == User.LEVEL_ROOT
+    def join_prefix(base: str, *parts: str) -> str:
+        base = '/' + base.strip('/')
+        rest = '/'.join(p.strip('/') for p in parts if p is not None)
+        return base if not rest else f'{base}/{rest}'
 
-    @staticmethod
-    def is_admin(user: User) -> bool:
-        return user.level == User.LEVEL_ADMIN
+    @abstractmethod
+    def register_routes(self) -> 'BaseController':
+        # Subclasses must override and return self
+        raise NotImplementedError(f'{self.__class__.__name__}.register_routes() must be overridden')
 
-    @staticmethod
-    def is_user(user: User) -> bool:
-        return user.level == User.LEVEL_USER
-
-    # endregion --- Role Helpers ---
-    
 ```

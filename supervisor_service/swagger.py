@@ -1,14 +1,12 @@
-SERVICE_NAME = 'supervisor'
-SWAGGER_TITLE = 'Supervisor Service API'
+from .config import API_ENDPOINT, SWAGGER_DESCRIPTION, SWAGGER_TITLE
+
 
 SWAGGER_TEMPLATE = {
     'openapi': '3.0.3',
     'info': {
         'title': SWAGGER_TITLE,
         'version': '1.0.0',
-        'description': (
-            'Raspberry PI microservice software management service.\n'
-        )
+        'description': SWAGGER_DESCRIPTION
     },
     'components': {
         'securitySchemes': {
@@ -35,15 +33,15 @@ SWAGGER_CONFIG = {
     'specs': [
         {
             'endpoint': 'apispec',
-            'route': f'/api/{SERVICE_NAME}/apispec.json',   # Full path (must include the prefix)
-            'rule_filter': lambda rule: rule.rule.startswith(f'/api/{SERVICE_NAME}/'),
+            'route': f'{API_ENDPOINT}/apispec.json',   # Full path (must include the prefix)
+            'rule_filter': lambda rule: rule.rule.startswith(API_ENDPOINT),
             'model_filter': lambda tag: True,
         }
     ],
 
     # Define where Swagger UI will be served
-    'specs_route': f'/api/{SERVICE_NAME}/apidocs/',
-    'static_url_path': f'/api/{SERVICE_NAME}/flasgger_static',
+    'specs_route': f'{API_ENDPOINT}/swagger/',
+    'static_url_path': f'{API_ENDPOINT}/swagger_static',
 
     # UI meta
     'title': SWAGGER_TITLE,

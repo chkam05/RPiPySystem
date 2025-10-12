@@ -1,7 +1,6 @@
-from .config import HOST, PORT, SECRET
-from .service import AuthService
+from auth_service.service import AuthService
 
 
 if __name__ == '__main__':
-    service = AuthService(HOST, PORT, SECRET, __name__)
+    service = AuthService()
     service.run()

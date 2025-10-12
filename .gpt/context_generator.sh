@@ -32,12 +32,7 @@ MAX_DEPTH="${MAX_DEPTH:-3}"
 # EXTRA_MD_FILES="${EXTRA_MD_FILES:-}"
 EXTRA_MD_FILES="./launch.sh\
     ./supervisord.conf \
-    ./.env.example \
-    ./auth_service/app.py \
-    ./auth_service/config.py \
-    ./auth_service/swagger.py \
-    ./auth_service/controllers/sessions.py \
-    ./auth_service/utils/auth_guard.py"
+    ./.env.example"
 # -----------------------------------------------------------------------------
 
 # Build a sanitized array of absolute paths for --extra

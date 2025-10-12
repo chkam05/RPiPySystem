@@ -1,25 +1,58 @@
-from typing import Any, Dict, Optional
-from flask import request, jsonify
-from utils.auto_swag import (
-    auto_swag, ok, created, bad_request, conflict, not_found,
-    request_body_json, qparam, unauthorized
-)
-from utils.base_controller import BaseController
+from typing import Any, ClassVar, Dict, Optional
 
+from flask import jsonify, request
+
+from auth_service.models.access_level import AccessLevel
 from auth_service.models.user import User
 from auth_service.storage.users_storage import UsersStorage
 from auth_service.utils.auth_guard import AuthGuard
+from utils.auto_swag import (
+    auto_swag, bad_request, conflict, created, not_found, ok, 
+    qparam, request_body_json, unauthorized
+)
+from utils.base_controller import BaseController
+from utils.flask_api_service import FlaskApiService
 
 
 class UsersController(BaseController):
-    def __init__(self, *, url_prefix: str = '/api/auth/user', users: Optional[UsersStorage] = None) -> None:
-        self.storage = users or UsersStorage()
-        self.auth = AuthGuard(self.storage)
-        super().__init__('auth_users', __name__, url_prefix=url_prefix)
+    _CONTROLLER_NAME: ClassVar[str] = 'auth_users'
+    _CONTROLLER_PATH: ClassVar[str] = 'users'
+
+    def __init__(
+            self,
+            url_prefix_base: str,
+            auth_guard: AuthGuard,
+            users_storage: UsersStorage,
+            *,
+            service: Optional[FlaskApiService] = None) -> None:
+        # Fields validation:
+        if not isinstance(url_prefix_base, str) or not url_prefix_base.strip():
+            raise ValueError('url_prefix_base is required')
+        if not auth_guard:
+            raise ValueError('auth_guard is required')
+        if not users_storage:
+            raise ValueError('users_storage is required')
+        
+        url_prefix = self.join_prefix(url_prefix_base, self._CONTROLLER_PATH)
+
+        self.auth = auth_guard
+        self.users_storage = users_storage
+        super().__init__(self._CONTROLLER_NAME, __name__, url_prefix, service=service)
     
+    def register_routes(self) -> 'UsersController':
+        self.add_url_rule('/create', view_func=self.create_user, methods=['POST'])
+        self.add_url_rule('/list', view_func=self.list_users, methods=['GET'])
+        self.add_url_rule('/<id>', view_func=self.get_user, methods=['GET'])
+        self.add_url_rule('/<id>', view_func=self.update_user, methods=['PATCH'])
+        self.add_url_rule('/<id>', view_func=self.remove_user, methods=['DELETE'])
+        return self
+    
+    # --- ENDPOINTS ---
+
     @auto_swag(
         tags=['user'],
-        summary='Add user (Admin/Root)',
+        summary='Create User (Admin/Root)',
+        description='Creates a new user account; Requires Admin or Root privileges.',
         request_body=request_body_json(User.schema_add_request()),
         responses={
             201: created(User.schema_public()),
@@ -29,7 +62,7 @@ class UsersController(BaseController):
             409: conflict('User exists'),
         }
     )
-    def add_user(self):
+    def create_user(self):
         # Require valid access token
         try:
             actor, _ = self.auth.require_auth()
@@ -43,27 +76,28 @@ class UsersController(BaseController):
         data = request.get_json(silent=True) or {}
         name = data.get(User.FIELD_NAME)
         password = data.get('password')
-        level = data.get(User.FIELD_LEVEL) or User.LEVEL_USER
+        level = data.get(User.FIELD_LEVEL) or AccessLevel.USER.value
 
         if not isinstance(name, str) or not name or not isinstance(password, str) or not password:
             return jsonify({'message': 'invalid payload'}), 400
 
         # Admin cannot create Root-level users
         # (only Root has permission to create another Root account)
-        if self.auth.is_admin(actor) and level == User.LEVEL_ROOT:
+        if self.auth.is_admin(actor) and level == AccessLevel.ROOT:
             return jsonify({'message': 'forbidden: admin cannot create Root'}), 403
 
         try:
-            user = self.storage.add_user(name=name, raw_password=password, level=level)
+            user = self.users_storage.add_user(name=name, raw_password=password, level=level)
         except ValueError as e:
             if str(e) == 'user_exists':
                 return jsonify({'message': 'user exists'}), 409
             raise
         return jsonify(user.to_public()), 201
-
+    
     @auto_swag(
         tags=['user'],
-        summary='List users (User/Admin/Root)',
+        summary='List Users (User/Admin/Root)',
+        description='Returns a list of users; Available to all roles.',
         parameters=[qparam('q', {'type': 'string'}, 'Optional name filter (contains)')],
         responses={
             200: ok({'type': 'array', 'items': User.schema_public()}),
@@ -78,12 +112,13 @@ class UsersController(BaseController):
         except PermissionError as e:
             return jsonify({'message': str(e)}), 401
 
-        users = [u.to_public() for u in self.storage.list_users()]
+        users = [u.to_public() for u in self.users_storage.list_users()]
         return jsonify(users), 200
-
+    
     @auto_swag(
         tags=['user'],
-        summary='Get user by id (User/Admin/Root)',
+        summary='Get User by ID (User/Admin/Root)',
+        description='Returns user details by ID; Available to all roles.',
         parameters=[{
             "in": "path",
             "name": "id",
@@ -105,14 +140,15 @@ class UsersController(BaseController):
         except PermissionError as e:
             return jsonify({'message': str(e)}), 401
 
-        user = self.storage.get_user_by_id(id)
+        user = self.users_storage.get_user_by_id(id)
         if not user:
             return jsonify({'message': 'not found'}), 404
         return jsonify(user.to_public()), 200
-
+    
     @auto_swag(
         tags=['user'],
-        summary='Remove user (User: only self; Admin: not Root; Root: any)',
+        summary='Remove User (User: itself; Admin: not Root; Root: any)',
+        description='Removes a User; Users may delete only themselves, Admins cannot delete Root, and Root may delete any user.',
         parameters=[{
             "in": "path",
             "name": "id",
@@ -134,7 +170,7 @@ class UsersController(BaseController):
         except PermissionError as e:
             return jsonify({'message': str(e)}), 401
 
-        target = self.storage.get_user_by_id(id)
+        target = self.users_storage.get_user_by_id(id)
         if not target:
             return jsonify({'message': 'not found'}), 404
 
@@ -145,18 +181,19 @@ class UsersController(BaseController):
 
         # --- Admin rule ---
         # Admin can delete other users, but not Root accounts.
-        if self.auth.is_admin(actor) and target.level == User.LEVEL_ROOT:
+        if self.auth.is_admin(actor) and target.level == AccessLevel.ROOT:
             return jsonify({'message': 'forbidden: admin cannot remove Root'}), 403
 
         # --- Root rule ---
         # Root can delete any user (no restriction).
-        if not self.storage.remove_user(id):
+        if not self.users_storage.remove_user(id):
             return jsonify({'message': 'not found'}), 404
         return jsonify({'removed': True}), 200
-
+    
     @auto_swag(
         tags=['user'],
-        summary='Update user (User: self & cannot change level; Admin: non-Root target, no level=Root; Root: any)',
+        summary='Update user (User: itself; Admin: not Root; Root: any)',
+        description='Updates a User; Users may update only themselves and cannot change level, Admins may update non-Root users without setting level=Root, and Root may update any user.',
         parameters=[{
             "in": "path",
             "name": "id",
@@ -189,7 +226,7 @@ class UsersController(BaseController):
         if name is None and password is None and new_level is None:
             return jsonify({'message': 'nothing to update'}), 400
 
-        target = self.storage.get_user_by_id(id)
+        target = self.users_storage.get_user_by_id(id)
         if not target:
             return jsonify({'message': 'not found'}), 404
 
@@ -205,15 +242,15 @@ class UsersController(BaseController):
         # - update Root accounts (to avoid privilege reduction of highest authority)
         # - set level=Root (to avoid unauthorized privilege escalation)
         elif self.auth.is_admin(actor):
-            if target.level == User.LEVEL_ROOT:
+            if target.level == AccessLevel.ROOT:
                 return jsonify({'message': 'forbidden: cannot update Root user'}), 403
-            if isinstance(new_level, str) and new_level == User.LEVEL_ROOT:
+            if isinstance(new_level, str) and new_level == AccessLevel.ROOT.value:
                 return jsonify({'message': 'forbidden: cannot assign Root level'}), 403
 
         # --- Root rule ---
         # Root can update any user freely (no restriction).
         try:
-            updated = self.storage.update_user(
+            updated = self.users_storage.update_user(
                 id,
                 name=name if isinstance(name, str) else None,
                 raw_password=password if isinstance(password, str) else None,
@@ -229,15 +266,3 @@ class UsersController(BaseController):
         if not updated:
             return jsonify({'message': 'not found'}), 404
         return jsonify(updated.to_public()), 200
-
-    # region --- Endpoint registration ---
-
-    def register_routes(self) -> 'UsersController':
-        self.add_url_rule('/add', view_func=self.add_user, methods=['POST'])
-        self.add_url_rule('/list', view_func=self.list_users, methods=['GET'])
-        self.add_url_rule('/<id>', view_func=self.get_user, methods=['GET'])
-        self.add_url_rule('/<id>', view_func=self.update_user, methods=['PATCH'])
-        self.add_url_rule('/<id>', view_func=self.remove_user, methods=['DELETE'])
-        return self
-
-    # endregion --- Endpoint registration ---

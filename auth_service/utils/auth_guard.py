@@ -1,87 +1,83 @@
-from typing import Optional, Tuple, Dict, Any
-from flask import request
-from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+from typing import Any, ClassVar, Dict, Tuple
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
+from auth_service.models.access_level import AccessLevel
+from auth_service.models.access_token import AccessToken
 from auth_service.models.user import User
-from auth_service.models.access_token_payload import AccessTokenPayload
 from auth_service.storage.users_storage import UsersStorage
-from auth_service import config
+from utils.security import SecurityUtils
 
 
 class AuthGuard:
-    def __init__(self, users: Optional[UsersStorage] = None) -> None:
-        self.users = users or UsersStorage()
-        self.serializer = URLSafeTimedSerializer(config.SECRET, salt="auth-tokens")
-        self.ACCESS_TTL = getattr(config, "ACCESS_TOKEN_SECONDS", 15 * 60)
+    _SALT_NAME: ClassVar[str] = 'auth-tokens'
+
+    def __init__(self, at_seconds: int, rt_seconds: int, secret: str, users_storage: UsersStorage):
+        # Fields validation:
+        if not isinstance(at_seconds, int) or at_seconds <= 0:
+            raise ValueError('at_seconds (access token validation time in seconds) must be a positive integer.')
+        if not isinstance(rt_seconds, int) or rt_seconds <= 0:
+            raise ValueError('rt_seconds (refresh token validation time in seconds) must be a positive integer.')
+        if not secret:
+            raise ValueError('secret is required.')
+        if not users_storage:
+            raise ValueError('users_storage is required.')
+        
+        self.ACCESS_TTL = at_seconds
+        self.REFRESH_TTL = rt_seconds
+        self.serializer = URLSafeTimedSerializer(secret, salt=self._SALT_NAME)
+        self.users_storage = users_storage
     
-    # region --- Token helper methods ---
+    # --- Token Helper methods ---
 
-    @staticmethod
-    def read_bearer() -> Optional[str]:
-        # Gets the token from the Authorization: Bearer <token> header.
-        auth = request.headers.get("Authorization", "")
-        if not auth:
-            return None
-
-        # Normalize URL-encoded variant (some proxies/clients)
-        raw = auth.strip()
-        raw = raw.replace("Bearer%20", "Bearer ")
-
-        # Peel off any number of leading "Bearer " (handles 'Bearer Bearer <token>')
-        while raw.lower().startswith("bearer "):
-            raw = raw[7:].lstrip()
-
-        # Drop surrounding quotes if present
-        if (raw.startswith('"') and raw.endswith('"')) or (raw.startswith("'") and raw.endswith("'")):
-            raw = raw[1:-1].strip()
-
-        return raw or None
-    
     def load_access(self, token: str) -> Dict[str, Any]:
-        # Decodes and validates an access token, returning a payload (dict).
-        # Throws ValueError('expired'|'invalid') on error.
+        """
+        Decodes and verifies an access token. Returns a payload (dict).
+        """
         try:
             return self.serializer.loads(token, max_age=self.ACCESS_TTL)
         except SignatureExpired:
-            raise ValueError("expired")
+            raise ValueError('expired')
         except BadSignature:
-            raise ValueError("invalid")
+            raise ValueError('invalid')
     
-    def require_auth(self) -> Tuple[User, AccessTokenPayload]:
-        # Requires a valid access token.
-        # Returns: (User, AccessTokenPayload)
-        # Throws PermissionError if unauthorized.
-        atok = self.read_bearer()
+    def load_refresh(self, token: str) -> Dict[str, Any]:
+        """
+        Decodes and verifies the refresh token. Returns the payload (dict).
+        """
+        try:
+            return self.serializer.loads(token, max_age=self.REFRESH_TTL)
+        except SignatureExpired:
+            raise ValueError('expired')
+        except BadSignature:
+            raise ValueError('invalid')
+    
+    def require_auth(self) -> Tuple[User, AccessToken]:
+        atok = SecurityUtils.read_bearer_from_request()
         if not atok:
-            raise PermissionError("missing bearer")
-
+            raise PermissionError('missing bearer')
+        
         try:
             raw = self.load_access(atok)
-            payload = AccessTokenPayload.from_dict(raw)
+            payload = AccessToken.from_dict(raw)
         except Exception as e:
-            raise PermissionError("invalid token")
+            raise PermissionError('invalid token')
 
-        actor = self.users.get_user_by_id(payload.sub)
+        actor = self.users_storage.get_user_by_id(payload.sub)
         if not actor:
-            raise PermissionError("user not found")
+            raise PermissionError('user not found')
 
         return actor, payload
-
-    # endregion --- Token helper methods ---
-
-    # region --- Role Helpers ---
+    
+    # --- Role Helpers ---
 
     @staticmethod
     def is_root(user: User) -> bool:
-        return user.level == User.LEVEL_ROOT
+        return user.level == AccessLevel.ROOT
 
     @staticmethod
     def is_admin(user: User) -> bool:
-        return user.level == User.LEVEL_ADMIN
+        return user.level == AccessLevel.ADMIN
 
     @staticmethod
     def is_user(user: User) -> bool:
-        return user.level == User.LEVEL_USER
-
-    # endregion --- Role Helpers ---
-    
+        return user.level == AccessLevel.USER

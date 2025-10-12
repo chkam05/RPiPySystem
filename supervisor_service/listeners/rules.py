@@ -64,6 +64,7 @@ def action_shutdown_supervisor(service, payload: Dict[str, str], result: Optiona
     
     try:
         EventLogger.log(f'Exec: {' '.join(SHUTDOWN_SUPERVISOR_COMMANDS)}', prefix=SERVICE_NAME)
+        action_stop_nginx(service, payload, result)
         r = subprocess.run(SHUTDOWN_SUPERVISOR_COMMANDS, capture_output=True, text=True)
         EventLogger.log(
             f'supervisorctl rc={r.returncode} stdout=\'{r.stdout.strip()}\' stderr=\'{r.stderr.strip()}\'',

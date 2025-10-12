@@ -1,4 +1,5 @@
-import xmlrpc.client
+import xmlrpc
+
 
 class TimeoutTransport(xmlrpc.client.Transport):
     """
