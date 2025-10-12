@@ -6,6 +6,7 @@ clear
 # Resolve project root and work from there.
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd -P)"
 APP_NAME="$(basename -- "${PROJECT_ROOT%/}")"
+VENV_DIR="$PROJECT_ROOT/.venv"
 
 cd "$PROJECT_ROOT"
 
@@ -24,5 +25,5 @@ rm -rf -- "$LOG_DIR"/*
 # Remove all __pycache__ directories (excluding .venv)
 # ------------------------------------------------------------------------------
 echo "[$APP_NAME] Clearing the project from __pycache__ directories ..."
-find "$PROJECT_ROOT" -type d -name "__pycache__"
+find "$PROJECT_ROOT" -type d -name "__pycache__" ! -path "$VENV_DIR/*" -exec rm -rf {} +
 # ------------------------------------------------------------------------------
