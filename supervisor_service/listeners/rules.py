@@ -1,3 +1,4 @@
+import os
 import subprocess
 import sys
 import traceback
@@ -8,38 +9,44 @@ from supervisor_service.models.event_handler import EventHandler
 
 SERVICE_NAME = 'event_listener'
 SUPERVISOR_SERVICE = 'supervisor_service'
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+NGINX_STOP_SCRIPT = os.path.join(PROJECT_ROOT, 'scripts', 'nginx_stop.sh')
 
 
 # region --- On Supervisor shutdown, stop nginx ---
 
-STOP_NGINX_COMMANDS = [
-    ['systemctl', 'stop', 'nginx'],
-    ['/usr/sbin/service', 'nginx', 'stop'],
-    ['/sbin/service', 'nginx', 'stop'],
-]
-
 def action_stop_nginx(service, payload: Dict[str, str], result: Optional[int]) -> None:
     EventLogger.log('Supervisor STOPPING -> stopping nginx...', prefix=SERVICE_NAME)
 
-    for cmd in STOP_NGINX_COMMANDS:
-        try:
-            EventLogger.log(f'Exec: {' '.join(cmd)}', prefix=SERVICE_NAME)
-            r = subprocess.run(cmd, capture_output=True, text=True, timeout=8)
-            EventLogger.log(
-                f'rc={r.returncode} stdout=\'{r.stdout.strip()}\' stderr=\'{r.stderr.strip()}\'',
-                prefix=SERVICE_NAME,
-            )
-            if r.returncode == 0:
-                EventLogger.log('Nginx stopped.', prefix=SERVICE_NAME)
-                return
-        except FileNotFoundError:
-            EventLogger.log(f'Not found: {cmd[0]}', prefix=SERVICE_NAME)
-        except subprocess.TimeoutExpired as te:
-                EventLogger.log('Timeout while stopping nginx', prefix=SERVICE_NAME, exc=te)
-        except Exception as e:
-                EventLogger.log('Exception while stopping nginx', prefix=SERVICE_NAME, exc=e)
-                traceback.print_exc(file=sys.stderr)
-    EventLogger.log('Failed to stop nginx.', prefix=SERVICE_NAME)
+    try:
+        r = subprocess.run(
+            ['bash', NGINX_STOP_SCRIPT],
+            capture_output=True,
+            text=True,
+            timeout=20
+        )
+        
+        returncode = r.returncode
+        stdout = r.stdout.strip()
+        stderr = r.stderr.strip()
+
+        if stdout:
+            EventLogger.log(stdout, prefix=SERVICE_NAME)
+        if stderr:
+            EventLogger.log(stderr, prefix=SERVICE_NAME)
+
+        if returncode == 0:
+            EventLogger.log('Nginx stopped.', prefix=SERVICE_NAME)
+            return
+    except FileNotFoundError:
+        EventLogger.log(f'Script not found: {NGINX_STOP_SCRIPT}', prefix=SERVICE_NAME)
+    except subprocess.TimeoutExpired as te:
+        EventLogger.log('Timeout while running nginx_stop.sh', prefix=SERVICE_NAME, exc=te)
+    except Exception as e:
+        EventLogger.log('Exception while running nginx_stop.sh', prefix=SERVICE_NAME, exc=e)
+        traceback.print_exc(file=sys.stderr)
+
+    EventLogger.log('Failed to stop nginx via script.', prefix=SERVICE_NAME)
 
 RULE_SUPERVISOR_STOPPING = EventHandler(
     service_name=None,
@@ -63,13 +70,19 @@ def action_shutdown_supervisor(service, payload: Dict[str, str], result: Optiona
     EventLogger.log(f'{proc} critical termination -> supervisor shutdown.', prefix=SERVICE_NAME)
     
     try:
-        EventLogger.log(f'Exec: {' '.join(SHUTDOWN_SUPERVISOR_COMMANDS)}', prefix=SERVICE_NAME)
         action_stop_nginx(service, payload, result)
-        r = subprocess.run(SHUTDOWN_SUPERVISOR_COMMANDS, capture_output=True, text=True)
-        EventLogger.log(
-            f'supervisorctl rc={r.returncode} stdout=\'{r.stdout.strip()}\' stderr=\'{r.stderr.strip()}\'',
-            prefix=SERVICE_NAME,
-        )
+        r = subprocess.run(SHUTDOWN_SUPERVISOR_COMMANDS, capture_output=True, text=True, timeout=30)
+
+        returncode = r.returncode
+        stdout = r.stdout.strip()
+        stderr = r.stderr.strip()
+
+        if stdout:
+            EventLogger.log(stdout, prefix=SERVICE_NAME)
+        if stderr:
+            EventLogger.log(stderr, prefix=SERVICE_NAME)
+        if returncode == 0:
+            return
     except FileNotFoundError:
         EventLogger.log('Not found: supervisorctl', prefix=SERVICE_NAME)
     except Exception as e:

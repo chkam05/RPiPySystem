@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 set -Eeuo pipefail
-clear
 
 # Resolve project root and work from there.
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd -P)"

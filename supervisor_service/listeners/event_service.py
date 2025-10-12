@@ -1,10 +1,35 @@
+import os
+import signal
 import sys
+import threading
 import traceback
 from typing import ClassVar, Dict, List, Optional
 from supervisor import childutils
 
 from supervisor_service.listeners.event_logger import EventLogger
 from supervisor_service.models.event_handler import EventHandler
+
+
+_shutdown_once = threading.Event()
+
+
+def _sig_shutdown(signame: str, service_obj: 'SupervisorEventService') -> None:
+    if _shutdown_once.is_set():
+        return
+    _shutdown_once.set()
+    try:
+        EventLogger.log(f'{signame} received -> dispatching STOPPING...', prefix=service_obj.service_name)
+        pseudo_event = 'SUPERVISOR_STATE_CHANGE_STOPPING'
+        pseudo_payload = {
+            'processname': 'supervisord',
+            'groupname': 'supervisord',
+            'to_state': 'STOPPING',
+        }
+        service_obj._dispatch(pseudo_event, pseudo_payload)
+    except Exception as e:
+        EventLogger.log('Exception in signal shutdown handler', prefix=service_obj.service_name, exc=e)
+    finally:
+        os._exit(0)
 
 
 class SupervisorEventService:
@@ -14,6 +39,10 @@ class SupervisorEventService:
     def __init__(self, service_name: str, rules: Optional[List[EventHandler]]):
         self.service_name = service_name
         self.rules: List[EventHandler] = rules if rules else []
+        self._stopping = False
+
+        signal.signal(signal.SIGTERM, lambda s, f: _sig_shutdown('SIGTERM', self))
+        signal.signal(signal.SIGINT,  lambda s, f: _sig_shutdown('SIGINT',  self))
 
     # region --- Utilities ---
 
@@ -123,6 +152,9 @@ class SupervisorEventService:
         self._log(event, payload)
         self._dispatch(event, payload)
 
+        if event.startswith('SUPERVISOR_STATE_CHANGE') and payload.get('to_state') == 'STOPPING':
+            self._stopping = True
+
     def run(self) -> int:
         EventLogger.log("Listener started. Waiting for events...", prefix=self.service_name)
         while True:
@@ -133,5 +165,7 @@ class SupervisorEventService:
                 EventLogger.log("Unexpected exception in listener", prefix=self.service_name, exc=e)
                 traceback.print_exc(file=sys.stderr)
             finally:
+                if getattr(self, '_stopping', False):
+                    break
                 childutils.listener.ok()
         return 0

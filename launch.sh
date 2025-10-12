@@ -10,6 +10,9 @@ clear
 PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd -P)"
 APP_NAME="$(basename -- "${PROJECT_ROOT%/}")"
 
+CLEAR_SCRIPT="$PROJECT_ROOT/scripts/clear.sh"
+NGINX_INIT_SCRIPT="$PROJECT_ROOT/scripts/nginx_init.sh"
+
 cd "$PROJECT_ROOT"
 
 # Parse arguments
@@ -37,18 +40,6 @@ while [[ "${1-}" != "" ]]; do
             ;;
     esac
 done
-# ------------------------------------------------------------------------------
-
-# Clear supervisor and service logs
-# ------------------------------------------------------------------------------
-echo "[$APP_NAME] Clearing supervisor and services logs ..."
-LOG_DIR="${PROJECT_ROOT}/logs"
-
-if [ ! -d "$LOG_DIR" ]; then
-    mkdir -- "$LOG_DIR"
-fi
-
-rm -rf -- "$LOG_DIR"/*
 # ------------------------------------------------------------------------------
 
 # Create & activate Python Virtual Environment
@@ -88,10 +79,11 @@ else
 fi
 # ------------------------------------------------------------------------------
 
-# Remove all __pycache__ directories (excluding .venv)
+# Make cleanup [ROOT REQUIRE]
 # ------------------------------------------------------------------------------
-echo "[$APP_NAME] Clearing the project from __pycache__ directories ..."
-find "$PROJECT_ROOT" -type d -name "__pycache__" ! -path "$VENV_DIR/*" -exec rm -rf {} +
+if [ -f "$CLEAR_SCRIPT" ]; then
+    sudo -k bash "$CLEAR_SCRIPT"
+fi
 # ------------------------------------------------------------------------------
 
 # Loading environment variables
@@ -125,13 +117,13 @@ if [ -d control_service ] && [ -f control_service/manage.py ]; then
 fi
 # ------------------------------------------------------------------------------
 
-# Initialize Nginx configuration from script.
+# Initialize Nginx configuration from script. [ROOT REQUIRE]
 # ------------------------------------------------------------------------------
 NGINX_IP="${NGINX_IP:-192.168.1.101}"
 
-if [ -f "$PROJECT_ROOT/scripts/init_nginx.sh" ]; then
+if [ -f "$NGINX_INIT_SCRIPT" ]; then
     echo "[$APP_NAME] Initializing nginx (IP: $NGINX_IP) ..."
-    bash "$PROJECT_ROOT/scripts/init_nginx.sh" "$NGINX_IP"
+    sudo -k bash "$NGINX_INIT_SCRIPT" "$NGINX_IP"
 fi
 # ------------------------------------------------------------------------------
 
@@ -139,6 +131,22 @@ fi
 export PYTHONWARNINGS="ignore:pkg_resources is deprecated as an API:UserWarning"
 
 # Launching the supervisor – the supervisor service takes care of the rest
+# ------------------------------------------------------------------------------
+# Supervisor Configuration (used in supervisord.conf)
+export RUN_AS_USER="${USER}"
+export SUPERVISOR_SOCK="/tmp/supervisor-${USER}.sock"
+
 echo
 echo "[$APP_NAME] Starting application ..."
-exec supervisord -n -c supervisord.conf
+
+SUPERVISOR_BIN="$VENV_DIR/bin/supervisord"
+
+if [ ! -x "$SUPERVISOR_BIN" ]; then
+    echo "[$APP_NAME] ERROR: $SUPERVISOR_BIN not found or not executable."
+    echo "[$APP_NAME]        Make sure Supervisor is installed inside the venv."
+    exit 3
+fi
+
+# Run as root, with -E (keep VIRTUAL_ENV, PATH, RUN_AS_USER, SUPERVISOR_SOCK)
+exec sudo -E "$SUPERVISOR_BIN" -n -c supervisord.conf
+# ------------------------------------------------------------------------------

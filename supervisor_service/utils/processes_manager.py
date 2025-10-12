@@ -91,7 +91,10 @@ class ProcessesManager:
             
         items = self.list_processes()
         state_by_name = {p.name: (p.state or '').upper() for p in items}
-        names_sorted = sorted(state_by_name.keys(), key=lambda n: (prio(n), n or ''))
+        names_sorted = sorted(
+            state_by_name.keys(),
+            key=lambda n: (prio(n), n or ''),
+            reverse=True)
 
         for name in names_sorted:
             if (name or '').lower() in excluded:
