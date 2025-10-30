@@ -98,7 +98,7 @@ class UsersController(BaseController):
         tags=['user'],
         summary='List Users (User/Admin/Root)',
         description='Returns a list of users; Available to all roles.',
-        parameters=[qparam('q', {'type': 'string'}, 'Optional name filter (contains)')],
+        parameters=[qparam('name_filter', {'type': 'string'}, 'Optional name filter (contains)')],
         responses={
             200: ok({'type': 'array', 'items': User.schema_public()}),
             401: unauthorized('Unauthorized')
@@ -111,8 +111,10 @@ class UsersController(BaseController):
             _, _ = self.auth.require_auth()
         except PermissionError as e:
             return jsonify({'message': str(e)}), 401
+        
+        name_filter = request.args.get('name_filter', type=str)
 
-        users = [u.to_public() for u in self.users_storage.list_users()]
+        users = [u.to_public() for u in self.users_storage.list_users(name_filter)]
         return jsonify(users), 200
     
     @auto_swag(

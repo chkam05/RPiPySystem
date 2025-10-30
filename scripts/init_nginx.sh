@@ -67,7 +67,7 @@ Environment:
     NGINX_IP    Default IP if --ip not provided (fallback: $DEFAULT_IP)
 
 Examples:
-    $SCRIPT_NAME --ip 192.168.1.101 --config $PROJECT_ROOT/nging/$SITE.conf --config-name $SITE
+    $SCRIPT_NAME --ip 192.168.1.101 --config $PROJECT_ROOT/nginx/$SITE.conf --config-name $SITE
     $SCRIPT_NAME --ip 192.168.1.101 --no-logo --app-name myproject
 EOF
 )
@@ -330,14 +330,14 @@ main() {
 
     if [ -n "$ARG_KEY" ] && [ -n "$ARG_CHAIN" ]; then
         # Copy key & chain file.
-        if copy_if_exists "$ARG_KEY" "$KEY"; then
+        if copy_file_if_exists "$ARG_KEY" "$KEY"; then
             print_info "Installed key \"$ARG_KEY\" -> \"$KEY\"."
         else
             raise_err "Key file not found at \"$ARG_KEY\"." 1
         fi
 
-        if copy_if_exists "$ARG_CHAIN" "$CHAIN"; then
-            print_info "Installed key \"$ARG_CHAIN\" -> \"$CHAIN\"."
+        if copy_file_if_exists "$ARG_CHAIN" "$CHAIN"; then
+            print_info "Installed chain \"$ARG_CHAIN\" -> \"$CHAIN\"."
         else
             raise_err "Chain file not found at \"$ARG_CHAIN\"." 1
         fi

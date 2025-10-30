@@ -239,7 +239,7 @@ main() {
                 ;;
             --no-autostart)
                 SET_AUTO=0
-                shitf 1
+                shift 1
                 ;;
             --app-name)
                 # Override APP_NAME if provided.
@@ -287,7 +287,7 @@ main() {
         fi
 
         if "$fn"; then
-            if wait_until_nginx_stopped 5; then
+            if wait_until_stopped 5; then
                 if ! is_nginx_running; then
                     print_info "Nginx service has been stopped."
                     disable_nginx_autostart

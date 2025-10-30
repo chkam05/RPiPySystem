@@ -20,7 +20,7 @@ class UsersStorage(BaseJsonStorage):
     # --- Users CRUD methods ---
 
     def add_user(self, name: str, raw_password: str, *, level: str = AccessLevel.USER.value) -> User:
-        if self.get_by_name(name):
+        if self.get_user_by_name(name):
             raise ValueError('user_exists')
         
         blob = self._read()
@@ -46,9 +46,17 @@ class UsersStorage(BaseJsonStorage):
                 return u
         return None
 
-    def list_users(self) -> List[User]:
+    def list_users(self, name_filter: Optional[str] = None) -> List[User]:
         blob = self._read()
         users = blob.get(self.KEY_USERS, [])
+        
+        if name_filter:
+            name_filter_lower = name_filter.lower()
+            users = [
+                u for u in users
+                if name_filter_lower in u.get(User.FIELD_NAME, '').lower()
+            ]
+
         return [User.from_dict(u) for u in users]
 
     def remove_user(self, uid: str) -> bool:
@@ -82,7 +90,7 @@ class UsersStorage(BaseJsonStorage):
         current = users[idx]
 
         if name is not None:
-            if name != current.get(User.FIELD_NAME) and self.get_by_name(name):
+            if name != current.get(User.FIELD_NAME) and self.get_user_by_name(name):
                 raise ValueError('user_exists')
             current[User.FIELD_NAME] = name
 

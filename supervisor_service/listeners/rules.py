@@ -10,7 +10,7 @@ from supervisor_service.models.event_handler import EventHandler
 SERVICE_NAME = 'event_listener'
 SUPERVISOR_SERVICE = 'supervisor_service'
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-NGINX_STOP_SCRIPT = os.path.join(PROJECT_ROOT, 'scripts', 'nginx_stop.sh')
+NGINX_STOP_SCRIPT = os.path.join(PROJECT_ROOT, 'scripts', 'stop_nginx.sh')
 
 
 # region --- On Supervisor shutdown, stop nginx ---
@@ -20,7 +20,7 @@ def action_stop_nginx(service, payload: Dict[str, str], result: Optional[int]) -
 
     try:
         r = subprocess.run(
-            ['bash', NGINX_STOP_SCRIPT],
+            ['bash', NGINX_STOP_SCRIPT, '--no-logo'],
             capture_output=True,
             text=True,
             timeout=20

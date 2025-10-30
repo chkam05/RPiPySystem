@@ -20,7 +20,7 @@ DEFAULT_IP_ADDRESS="192.168.1.101"
 # --- Resolve project directories. ---
 SCRIPT_DIR=$(dirname "$0")
 SCRIPT_NAME=$(basename "$0")
-PROJECT_ROOT=$(CDPATH=; cd -- "$(dirname "$SCRIPT_PATH")" && pwd -P)
+PROJECT_ROOT=$(cd "$SCRIPT_DIR" && pwd -P)
 
 # --- Resolve scripts directories. ---
 SCRIPTS_DIR="$PROJECT_ROOT/scripts"
@@ -112,18 +112,37 @@ read_ipv4_address() {
         raise_err "Missing IP address value after --ip." 2
     fi
 
-    IFS=. set -- $ip_addr
+    # Remove whitespace (spaces, tabs, CR/LF) from input. 
+    ip_addr=$(printf '%s' "$ip_addr" | tr -d ' \t\r\n')
+
+    # Temporarily set IFS to dot, disable globbing, split into octets.
+    set -f
+    old_ifs=$IFS
+    IFS=.
+    set -- $ip_addr
+    IFS=$old_ifs
+    set +f
+
+    # Check the number of octets (have to be 4).
     if [ "$#" -ne 4 ]; then
         raise_err "Invalid IPv4 address: $ip_addr." 2
+        return 2
     fi
 
+    # Validation of each octet.
     for oct in "$@"; do
-        case "$oct" in
-            ''|*[!0-9]*) raise_err "Invalid IPv4 address: $ip_addr." 2 ;;
+        # Only numbers
+        case $oct in
+            ''|*[!0-9]*)
+                raise_err "Invalid IPv4 address: $ip_addr." 2
+                return 2
+                ;;
         esac
 
+        # Range 0..255
         if [ "$oct" -lt 0 ] || [ "$oct" -gt 255 ]; then
-            raise_err "Invalid IPv4 address: $ip_addr" 2
+            raise_err "Invalid IPv4 address: $ip_addr." 2
+            return 2
         fi
     done
 
@@ -146,13 +165,13 @@ load_deployment_env() {
     env_file=""
 
     case "$DEPLOYMENT" in
-        "$CONST_DEV_DEV")
+        "$CONST_DEPLOYMENT_DEV")
             env_file="$PROJECT_ROOT/.env.dev"
             ;;
-        "$CONST_DEV_PROD")
+        "$CONST_DEPLOYMENT_PROD")
             env_file="$PROJECT_ROOT/.env"
             ;;
-        "$CONST_DEV_TEST")
+        "$CONST_DEPLOYMENT_TEST")
             env_file="$PROJECT_ROOT/.env.test"
             ;;
         *)
@@ -232,7 +251,8 @@ start_supervisord() {
     SUPERVISOR_SOCK="/tmp/supervisor-${RUN_AS_USER}.sock"
     export SUPERVISOR_SOCK
 
-    print_info "\nStarting application ..."
+    printf '\n'
+    print_info "Starting application ..."
 
     SUPERVISOR_BIN="$VENV_DIR/bin/supervisord"
 
@@ -323,7 +343,7 @@ handle_exclusive_modes() {
             ;;
         "$CONST_MODE_MIGRATE")
             py_exec=$(setup_venv "$py_exec" "$VENV_DIR" "$REQ_FILE")
-            load_env
+            load_deployment_env
             run_django_migrations "$py_exec"
             exit 0
             ;;
@@ -352,7 +372,7 @@ main() {
 
     # Cleanup logs and python build files from __pycache__.
     if [ "$NO_CLEANUP" -eq 0 ]; then
-        clear_logs_as_root
+        cleanup
     fi
 
     # Load environment variables from file.
@@ -360,7 +380,7 @@ main() {
 
     # Run Django migrations if a Django app is present.
     if [ "$NO_MIGRATION" -eq 0 ]; then
-        run_django_migrations
+        run_django_migrations "$PY_EXEC"
     fi
 
     # Initialize nginx service configuration and start it up.

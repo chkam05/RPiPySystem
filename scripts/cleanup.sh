@@ -78,7 +78,7 @@ clean_pycache() {
     
     find "$PROJECT_ROOT" \
         -path "$VENV_DIR" -prune -o \
-        -type d -name "__pycache__" -exec rm -rf -- {} \;
+        -type d -name "__pycache__" -exec rm -rf -- {} + 2>/dev/null
 }
 
 # --- The main execution function that handles script parameters. ---
