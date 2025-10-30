@@ -6,13 +6,16 @@
 # Fail on unset vars and non-zero exit codes.
 set -eu
 
-# --- Resolve project directories and work from root directory. ---
+# --- Resolve project directories. ---
 SCRIPT_DIR=$(dirname "$0")
 SCRIPT_NAME=$(basename "$0")
 PROJECT_ROOT=$(cd "$SCRIPT_DIR/.." && pwd -P)
+LIB_DIR="$PROJECT_ROOT/scripts/lib"
 
 # --- VARIABLES ---
 APP_NAME=$(basename "$PROJECT_ROOT")
+LOGO_FILE="$PROJECT_ROOT/scripts/logo.txt"
+SET_AUTO=0  # default: disabled
 
 SITE="pi_stack"
 NGINX_CONF_DIR="/etc/nginx/sites-available"
@@ -27,66 +30,11 @@ NGINX_LINK="${NGINX_LINK_DIR}/${SITE}.conf"
 
 DEFAULT_IP="192.168.1.101"
 
-# region LOGO CONTENT
-LOGO_CONTENT=$(cat << 'EOF'
- ______   ______   __    _____                       __                            
-/      \ /      \ /  |  /     \                     /  |                           
-$$$$$$  |$$$$$$  |$$/  /$$$$$  | __   __   ______  _$$ |_     _____   _____  ____  
-$$ |_$$ |$$ |_$$ |/  | $$ \_$$/ /  | /  | /      |/ $$   |   /     \ /     \/    \ 
-$$   $$< $$   $$/ $$ | $$     \ $$ | $$ |/$$$$$$/ $$$$$$/   /$$$$$  |$$$$$$ $$$$  |
-$$$$$$  |$$$$$$/  $$ |  $$$$$  |$$ | $$ |$$     \   $$ | __ $$   $$ |$$ | $$ | $$ |
-$$ | $$ |$$ |     $$ | /  \_$$ |$$ \_$$ | $$$$$  |  $$ |/  |$$$$$$$/ $$ | $$ | $$ |
-$$ | $$ |$$ |     $$ | $$   $$/ $$   $$ |/    $$/   $$  $$/ $$      |$$ | $$ | $$ |
-$$/  $$/ $$/      $$/   $$$$$/   $$$$$$ |$$$$$$/     $$$$/   $$$$$$/ $$/  $$/  $$/ 
-                                /  \_$$ |                                          
-                                $$   $$/                                           
-                                 $$$$$/                                            
-EOF
-)
-# endregion
-
-
 # Work from the project root.
 cd "$PROJECT_ROOT"
 
-
-# ------------------------------------------------------------------------------
-# --- PRINT UTILITY METHODS ---
-# ------------------------------------------------------------------------------
-
-# --- Prints an error message on the screen console. ---
-print_error() {
-    printf '[%s] ERROR: %s\n' "$APP_NAME" "$*" 1>&2
-}
-
-# --- Prints a warning message on the screen console. ---
-print_warn() {
-    printf '[%s] WARN: %s\n' "$APP_NAME" "$*"
-}
-
-# --- Prints a message on the screen console. ---
-print_info() {
-    printf '[%s] %s\n' "$APP_NAME" "$*"
-}
-
-# --- Prints logo on the screen console. ---
-print_logo() {
-    printf '\n%s\n\n' "$LOGO_CONTENT"
-}
-
-# --- Prints the horizotnal screen split line on the screen console. ---
-print_line() {
-    # Try to get terminal width, fallback to 80 if not available.
-    cols=$(tput cols 2>/dev/null || stty size 2>/dev/null | awk '{print $2}' || printf '80')
-
-    # Fallback if cols is empty or invalid.
-    case "$cols" in
-        ''|*[!0-9]*) cols=80 ;;
-    esac
-
-    # Print line of '-' characters using printf and tr for safely character repeatition.
-    printf '%*s\n' "$cols" '' | tr ' ' '-'
-}
+# Source common libs.
+. "$LIB_DIR/common.sh"
 
 
 # ------------------------------------------------------------------------------
@@ -102,13 +50,25 @@ Nginx service configuration script for RPiSystem multi-service application.
 Usage: $SCRIPT_NAME [OPTIONS]
 
 Options:
-    --no-logo           Skip printing the logo.
-    --app-name <value>  Override the application name.
-    -h, --help          Show this help message and exit.
+    -h, --help                  Show this help message and exit.
+    -a, --autostart             Enable nginx service autostart.
+        --ip <value>            Override IP used in generated self-signed cert CN.
+        --config <file>         Path to nginx site configuration to install.
+        --config-name <value>   Target site configuration name.
+        --key <file>            Path to 'privkey.pem' to copy into \"$KEY\".
+        --chain <file>          Path to 'fullchain.pem' to copy into \"$CHAIN\".
+        --no-logo               Skip printing the logo.
+        --app-name <value>      Override the application name.
+
+Rules:
+    - If both --key or --chain is omitted, a self-signed pair will be generated.
+
+Environment:
+    NGINX_IP    Default IP if --ip not provided (fallback: $DEFAULT_IP)
 
 Examples:
-    $SCRIPT_NAME --no-logo
-    $SCRIPT_NAME --app-name myproject
+    $SCRIPT_NAME --ip 192.168.1.101 --config $PROJECT_ROOT/nging/$SITE.conf --config-name $SITE
+    $SCRIPT_NAME --ip 192.168.1.101 --no-logo --app-name myproject
 EOF
 )
     # endregion
@@ -120,60 +80,8 @@ EOF
 
 
 # ------------------------------------------------------------------------------
-# --- SCRIPT UTILITY METHODS ---
+# --- PARAMS HANDLING METHODS ---
 # ------------------------------------------------------------------------------
-
-# --- Prints an error message on the screen console and exit with an error code. ---
-raise_err() {
-    error_msg="$1"
-    error_code="$2"
-
-    if [ -z "$error_code" ]; then
-        error_code="1"
-    fi
-
-    print_error "$error_msg"
-    exit "$error_code"
-}
-
-# --- Checks if the script was run with root privileges (returns 0 if so, 1 otherwise). ---
-is_root() {
-    if [ "$(id -u)" -eq 0 ]; then   # 0 means root
-        return 0
-    else
-        return 1
-    fi
-}
-
-# --- Ensure the script is run as root; otherwise raise an error. ---
-check_root() {
-    if ! is_root; then
-        raise_err "To perform this operation the ROOT privileges are required." 1
-    fi
-}
-
-# --- Makes sure the directory exists, if not creates it. ---
-ensure_directory_exists() {
-    dir_path="$1"
-
-    if [ ! -d "$dir_path" ]; then
-        mkdir -p "$dir_path"
-    fi
-}
-
-# --- Copies the file if it exists. ---
-copy_file_if_exists() {
-    # Usage: copy_file_if_exists <src> <dst>
-    src="$1"
-    dst="$2"
-
-    if [ -f "$src" ]; then
-        cp -f "$src" "$dst"
-        return 0
-    fi
-
-    return 1
-}
 
 # --- Returns the ip for the nginx service; fallback: ENV, default. ---
 resolve_ip() {
@@ -190,6 +98,20 @@ resolve_ip() {
     fi
 
     printf '%s\n' "$DEFAULT_IP"
+}
+
+# --- Overwrites the target configuration name and updates dependent paths. ---
+overwrite_site_name() {
+    site_name="$1"
+
+    if [ -n "$site_name" ] && expr "$site_name" : '^[A-Za-z0-9._-]\+$' >/dev/null 2>&1; then
+        SITE="$site_name"
+        SSL_DIR="/etc/ssl/${site_name}"
+        NGINX_CONF="${NGINX_CONF_DIR}/${site_name}.conf"
+        NGINX_LINK="${NGINX_LINK_DIR}/${site_name}.conf"
+    else
+        raise_err "Incorrect value \"$site_name\" for --config-name" 1
+    fi
 }
 
 
@@ -238,6 +160,43 @@ generate_self_signed_if_missing() {
         -out "$CHAIN"
 }
 
+# --- Enables the nginx service to autostart. ---
+enable_nginx_autostart() {
+    # Skipping the autostart enable setting if flag is not set.
+    if [ "${SET_AUTO:-0}" -ne 1 ]; then
+        return 0
+    fi
+
+    print_info "Enabling nginx service autostart ..."
+
+    if command -v systemctl >/dev/null 2>&1; then
+        if systemctl enable nginx >/dev/null 2>&1; then
+            print_info "systemctl: Enabled nginx service autostart."
+            return 0
+        fi
+        print_warn "Failed to enable nginx autostart via systemctl."
+    fi
+
+    if command -v update-rc.d >/dev/null 2>&1; then
+        if update-rc.d nginx enable >/dev/null 2>&1; then
+            print_info "update-rc.d: Enabled nginx service autostart."
+            return 0
+        fi
+        print_warn "Failed to enable nginx autostart via update-rc.d."
+    fi
+
+    if command -v chkconfig >/dev/null 2>&1; then
+        if chkconfig nginx on >/dev/null 2>&1; then
+            print_info "chkconfig: Enabled nginx service autostart."
+            return 0
+        fi
+        print_warn "Failed to enable nginx autostart via chkconfig."
+    fi
+
+    print_warn "Could not enable nginx service autostart (no supported tool found)."
+    return 1
+}
+
 # --- Restarts the nginx service. ---
 reload_nginx() {
     if command -v nginx >/dev/null 2>&1; then
@@ -245,14 +204,18 @@ reload_nginx() {
         nginx -t
 
         if command -v systemctl >/dev/null 2>&1; then
-            systemctl restart nginx
-
-            if ! systemctl enable nginx >/dev/null 2>&1; then
-                print_info "Skipping \"systemctl enable nginx\" (may be unsupported)."
+            if ! systemctl restart nginx >/dev/null 2>&1; then
+                print_warn "Failed to restart nginx service via systemctl."
             fi
+
+            enable_nginx_autostart
         else
             if command -v service >/dev/null 2>&1; then
-                service nginx restart
+                if ! service nginx restart >/dev/null 2>&1; then
+                    print_warn "Failed to restart nginx service via service (SysV-init)."
+                fi
+
+                enable_nginx_autostart
             else
                 print_warn "No systemctl/service found; Please restart nginx manually."
             fi
@@ -269,6 +232,7 @@ reload_nginx() {
 # --- MAIN EXECUTION METHODS ---
 # ------------------------------------------------------------------------------
 
+# --- The main execution function that handles script parameters. ---
 main() {
     ARG_CONF=""
     ARG_CHAIN=""
@@ -284,6 +248,10 @@ main() {
                 print_logo
                 print_help
                 exit 0
+                ;;
+            -a|--autostart)
+                SET_AUTO=1
+                shift 1
                 ;;
             --app-name)
                 # Override APP_NAME if provided.
@@ -306,6 +274,13 @@ main() {
                     raise_err "Missing value for --config"
                 fi
                 ARG_CONF="$2"
+                shift 2
+                ;;
+            --config-name)
+                if [ $# -lt 2 ]; then
+                    raise_err "Missing value for --config-name"
+                fi
+                overwrite_site_name "$2"
                 shift 2
                 ;;
             --key)

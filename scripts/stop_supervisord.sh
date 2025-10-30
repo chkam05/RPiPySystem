@@ -6,13 +6,15 @@
 # Fail on unset vars and non-zero exit codes.
 set -eu
 
-# --- Resolve project directories and work from root directory. ---
+# --- Resolve project directories. ---
 SCRIPT_DIR=$(dirname "$0")
 SCRIPT_NAME=$(basename "$0")
 PROJECT_ROOT=$(cd "$SCRIPT_DIR/.." && pwd -P)
+LIB_DIR="$PROJECT_ROOT/scripts/lib"
 
 # --- VARIABLES ---
 APP_NAME=$(basename "$PROJECT_ROOT")
+LOGO_FILE="$PROJECT_ROOT/scripts/logo.txt"
 SUPERVISOR_SOCK_URI=${SUPERVISOR_SOCK_URI:-unix:///tmp/supervisor.sock}
 
 if [ -x "$PROJECT_ROOT/.venv/bin/supervisorctl" ]; then
@@ -21,66 +23,11 @@ else
     SUPERVISORCTL="supervisorctl"
 fi
 
-# region LOGO CONTENT
-LOGO_CONTENT=$(cat << 'EOF'
- ______   ______   __    _____                       __                            
-/      \ /      \ /  |  /     \                     /  |                           
-$$$$$$  |$$$$$$  |$$/  /$$$$$  | __   __   ______  _$$ |_     _____   _____  ____  
-$$ |_$$ |$$ |_$$ |/  | $$ \_$$/ /  | /  | /      |/ $$   |   /     \ /     \/    \ 
-$$   $$< $$   $$/ $$ | $$     \ $$ | $$ |/$$$$$$/ $$$$$$/   /$$$$$  |$$$$$$ $$$$  |
-$$$$$$  |$$$$$$/  $$ |  $$$$$  |$$ | $$ |$$     \   $$ | __ $$   $$ |$$ | $$ | $$ |
-$$ | $$ |$$ |     $$ | /  \_$$ |$$ \_$$ | $$$$$  |  $$ |/  |$$$$$$$/ $$ | $$ | $$ |
-$$ | $$ |$$ |     $$ | $$   $$/ $$   $$ |/    $$/   $$  $$/ $$      |$$ | $$ | $$ |
-$$/  $$/ $$/      $$/   $$$$$/   $$$$$$ |$$$$$$/     $$$$/   $$$$$$/ $$/  $$/  $$/ 
-                                /  \_$$ |                                          
-                                $$   $$/                                           
-                                 $$$$$/                                            
-EOF
-)
-# endregion
-
-
 # Work from the project root.
 cd "$PROJECT_ROOT"
 
-
-# ------------------------------------------------------------------------------
-# --- PRINT UTILITY METHODS ---
-# ------------------------------------------------------------------------------
-
-# --- Prints an error message on the screen console. ---
-print_error() {
-    printf '[%s] ERROR: %s\n' "$APP_NAME" "$*" 1>&2
-}
-
-# --- Prints a warning message on the screen console. ---
-print_warn() {
-    printf '[%s] WARN: %s\n' "$APP_NAME" "$*"
-}
-
-# --- Prints a message on the screen console. ---
-print_info() {
-    printf '[%s] %s\n' "$APP_NAME" "$*"
-}
-
-# --- Prints logo on the screen console. ---
-print_logo() {
-    printf '\n%s\n\n' "$LOGO_CONTENT"
-}
-
-# --- Prints the horizotnal screen split line on the screen console. ---
-print_line() {
-    # Try to get terminal width, fallback to 80 if not available.
-    cols=$(tput cols 2>/dev/null || stty size 2>/dev/null | awk '{print $2}' || printf '80')
-
-    # Fallback if cols is empty or invalid.
-    case "$cols" in
-        ''|*[!0-9]*) cols=80 ;;
-    esac
-
-    # Print line of '-' characters using printf and tr for safely character repeatition.
-    printf '%*s\n' "$cols" '' | tr ' ' '-'
-}
+# Source common libs.
+. "$LIB_DIR/common.sh"
 
 
 # ------------------------------------------------------------------------------
@@ -96,9 +43,9 @@ Script for forcing the application to close by stopping the supervisor.
 Usage: $SCRIPT_NAME [OPTIONS]
 
 Options:
-    --no-logo           Skip printing the logo.
-    --app-name <value>  Override the application name.
-    -h, --help          Show this help message and exit.
+    -h, --help              Show this help message and exit.
+        --no-logo           Skip printing the logo.
+        --app-name <value>  Override the application name.
 
 Examples:
     $SCRIPT_NAME --no-logo
@@ -110,40 +57,6 @@ EOF
     print_line
     printf "%s\n" "$HELP_TEXT"
     print_line
-}
-
-
-# ------------------------------------------------------------------------------
-# --- SCRIPT UTILITY METHODS ---
-# ------------------------------------------------------------------------------
-
-# --- Prints an error message on the screen console and exit with an error code. ---
-raise_err() {
-    error_msg="$1"
-    error_code="$2"
-
-    if [ -z "$error_code" ]; then
-        error_code="1"
-    fi
-
-    print_error "$error_msg"
-    exit "$error_code"
-}
-
-# --- Checks if the script was run with root privileges (returns 0 if so, 1 otherwise). ---
-is_root() {
-    if [ "$(id -u)" -eq 0 ]; then   # 0 means root
-        return 0
-    else
-        return 1
-    fi
-}
-
-# --- Ensure the script is run as root; otherwise raise an error. ---
-check_root() {
-    if ! is_root; then
-        raise_err "To perform this operation the ROOT privileges are required." 1
-    fi
 }
 
 
@@ -252,8 +165,6 @@ try_kill_supervisord() {
 # --- MAIN EXECUTION METHODS ---
 # ------------------------------------------------------------------------------
 
-
-
 # --- The main execution function that handles script parameters. ---
 main() {
     SHOW_LOGO=1     # default: show logo.
@@ -335,52 +246,3 @@ main() {
 
 
 main "$@"
-
-
-
-
-
-
-
-
-set -euo pipefail
-
-# Work from project root (parent of ./scripts)
-PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd -P)"
-APP_NAME="$(basename -- "${PROJECT_ROOT%/}")"
-
-# Prefer project venv supervisorctl, fallback to system one.
-# ------------------------------------------------------------------------------
-SUPERVISOR_SOCK_URI="${SUPERVISOR_SOCK_URI:-unix:///tmp/supervisor.sock}"
-
-if [ -x "$PROJECT_ROOT/.venv/bin/supervisorctl" ]; then
-    SUPERVISORCTL="$PROJECT_ROOT/.venv/bin/supervisorctl -s $SUPERVISOR_SOCK_URI"
-else
-    SUPERVISORCTL="supervisorctl -s $SUPERVISOR_SOCK_URI"
-fi
-# ------------------------------------------------------------------------------
-
-# Supervisord shutdown process
-# ------------------------------------------------------------------------------
-if pgrep -x supervisord > /dev/null; then
-    echo "[$APP_NAME] Supervisord detected."
-
-    if $SUPERVISORCTL status >/dev/null 2>&1; then
-        # Shutting down supervisord process gracefully ...
-        echo "[$APP_NAME] Attempting to shutdown supervisorctl ..."
-        $SUPERVISORCTL stop all || true
-        $SUPERVISORCTL shutdown || true
-    else
-        # Killing supervisord process ...
-        echo "[$APP_NAME] WARN: supervisorctl is not responding, forcing kill ..."
-        pkill -9 -x supervisord
-    fi
-
-    # Final check if supervisord service is still running.
-    if pgrep -x supervisord > /dev/null; then
-        echo "[$APP_NAME] Supervisorctl has been shut down."
-    fi
-else
-    echo "[$APP_NAME] No supervisord process found."
-fi
-# ------------------------------------------------------------------------------

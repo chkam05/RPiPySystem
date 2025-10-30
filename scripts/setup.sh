@@ -1,59 +1,63 @@
 #!/usr/bin/env bash
 # ------------------------------------------------------------------------------
-# RPiSystem multiservice application one-time setup:
-#
-# - create .venv, bootstrap pip,
-# - install requirements.
-#
-# FIRST RUN ONLY !
+# RPiSystem multiservice application one-time setup script.
 # ------------------------------------------------------------------------------
 
-set -Eeuo pipefail
-clear
+# Fail on unset vars and non-zero exit codes.
+set -eu
 
-# Resolve project root and work from there.
-PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd -P)"
-APP_NAME="$(basename -- "${PROJECT_ROOT%/}")"
-
-cd "$PROJECT_ROOT"
-
-# Create & activate Python Virtual Environment
-# ------------------------------------------------------------------------------
+# --- Resolve project directories. ---
+SCRIPT_DIR=$(dirname "$0")
+SCRIPT_NAME=$(basename "$0")
+PROJECT_ROOT=$(cd "$SCRIPT_DIR/.." && pwd -P)
+LIB_DIR="$PROJECT_ROOT/scripts/lib"
+REQ_FILE="$PROJECT_ROOT/requirements.txt"
 VENV_DIR="$PROJECT_ROOT/.venv"
 
-echo "[$APP_NAME] Checking Python virtual environment (.venv) ..."
+# --- VARIABLES ---
+APP_NAME=$(basename "$PROJECT_ROOT")
+LOGO_FILE="$PROJECT_ROOT/scripts/logo.txt"
 
-if [ ! -d "$VENV_DIR" ]; then
-  echo "[$APP_NAME] Creating python virtual environment at $VENV_DIR ..."
-  python -m venv "$VENV_DIR"
-fi
-# ------------------------------------------------------------------------------
+# Work from the project root.
+cd "$PROJECT_ROOT"
 
-# Activate Python Virtual Environment and finish one-time setup
-# ------------------------------------------------------------------------------
-# shellcheck disable=SC1091
-. "$VENV_DIR/bin/activate"
-# ------------------------------------------------------------------------------
+# Source common libs.
+. "$LIB_DIR/common.sh"
+. "$LIB_DIR/python.sh"
 
-# Upgrade pip and install pip-dependent packages
+
 # ------------------------------------------------------------------------------
-echo "[$APP_NAME] Updating pip and installing its dependent packages ..."
-python -m ensurepip --upgrade >/dev/null 2>&1 || true
-python -m pip install --upgrade pip setuptools wheel
+# --- MAIN EXECUTION METHODS ---
 # ------------------------------------------------------------------------------
 
-# Install python requirements from file.
-# ------------------------------------------------------------------------------
-REQ_FILE="$PROJECT_ROOT/requirements.txt"
+# --- The main execution function that handles script parameters. ---
+main() {
+    print_logo
 
-if [ -f "$REQ_FILE" ]; then
-    echo "[$APP_NAME] Installing dependencies from $REQ_FILE ..."
-    python -m pip install -r "$REQ_FILE"
-else
-    echo "[start] NOTE: $REQ_FILE file not found; Skipping dependencies installation."
-fi
-# ------------------------------------------------------------------------------
+    # Check if python interpreter is available in system.
+    PY_EXEC=$(detect_python || true)
 
-# Finish
-echo "[$APP_NAME] Install complete."
-echo "[$APP_NAME] Activate python virtual environment with: source ./.venv/bin/activate"
+    if [ -z "${PY_EXEC:-}" ]; then
+        raise_err "No python interpreter found (python3/python)." 1
+    fi
+
+    # Ensure existence of python virtual environment.
+    if [ ! -d "$VENV_DIR" ]; then
+        create_venv "$PY_EXEC" "$VENV_DIR"
+    else
+        print_info "Python virtual environment already exists at $VENV_DIR."
+    fi
+
+    # Activate python virtual environment.
+    PY_EXEC=$(activate_venv "$VENV_DIR")
+
+    # Upgrade python packages manager and install requirements.
+    upgrade_pip_toolchain "$PY_EXEC"
+    install_requirements "$PY_EXEC" "$REQ_FILE"
+
+    print_info "Installation complete."
+    print_info "Activate python virtual environment with: source ./.venv/bin/activate"
+}
+
+
+main "$@"
