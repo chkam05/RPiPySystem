@@ -17,6 +17,8 @@ from utils.flask_api_service import FlaskApiService
 class UsersController(BaseController):
     _CONTROLLER_NAME: ClassVar[str] = 'auth_users'
     _CONTROLLER_PATH: ClassVar[str] = 'users'
+    _LIST_USERS_F_NAME: ClassVar[str] = 'name_filter'
+    _LIST_USERS_F_LEVEL: ClassVar[str] = 'level_filter'
 
     def __init__(
             self,
@@ -98,7 +100,10 @@ class UsersController(BaseController):
         tags=['user'],
         summary='List Users (User/Admin/Root)',
         description='Returns a list of users; Available to all roles.',
-        parameters=[qparam('name_filter', {'type': 'string'}, 'Optional name filter (contains)')],
+        parameters=[
+            qparam(_LIST_USERS_F_NAME, {'type': 'string'}, 'Optional name filter (contains)'),
+            qparam(_LIST_USERS_F_LEVEL, {'type': 'string'}, 'Optional level filter (equal)')
+        ],
         responses={
             200: ok({'type': 'array', 'items': User.schema_public()}),
             401: unauthorized('Unauthorized')
@@ -112,9 +117,11 @@ class UsersController(BaseController):
         except PermissionError as e:
             return jsonify({'message': str(e)}), 401
         
-        name_filter = request.args.get('name_filter', type=str)
+        f_name = request.args.get(self._LIST_USERS_F_NAME, type=str)
+        f_level = request.args.get(self._LIST_USERS_F_LEVEL, type=str)
 
-        users = [u.to_public() for u in self.users_storage.list_users(name_filter)]
+        users = [u.to_public() for u in 
+                 self.users_storage.list_users(f_name, f_level)]
         return jsonify(users), 200
     
     @auto_swag(

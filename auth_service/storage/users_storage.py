@@ -46,18 +46,35 @@ class UsersStorage(BaseJsonStorage):
                 return u
         return None
 
-    def list_users(self, name_filter: Optional[str] = None) -> List[User]:
+    @staticmethod
+    def _filter_user(
+            u: Dict[str, Any],
+            f_name: Optional[str] = None,
+            f_level: Optional[str] = None) -> bool:
+        name_val = str(u.get(User.FIELD_NAME, ''))
+        level_val = str(u.get(User.FIELD_LEVEL, ''))
+        
+        if f_name:
+            nf = f_name.lower()
+            if nf not in name_val.lower():
+                return False
+        
+        if f_level:
+            lf = f_level.lower()
+            if lf != level_val.lower():
+                return False
+        
+        return True
+    
+    def list_users(
+            self,
+            f_name: Optional[str] = None,
+            f_level: Optional[str] = None) -> List[User]:
         blob = self._read()
         users = blob.get(self.KEY_USERS, [])
         
-        if name_filter:
-            name_filter_lower = name_filter.lower()
-            users = [
-                u for u in users
-                if name_filter_lower in u.get(User.FIELD_NAME, '').lower()
-            ]
-
-        return [User.from_dict(u) for u in users]
+        filtered = [u for u in users if self._filter_user(u, f_name, f_level)]
+        return [User.from_dict(u) for u in filtered]
 
     def remove_user(self, uid: str) -> bool:
         blob = self._read()
@@ -71,7 +88,7 @@ class UsersStorage(BaseJsonStorage):
         blob[self.KEY_USERS] = match_users
         self._atomic_write(blob)
         return True
-
+    
     def update_user(
             self,
             uid: str,

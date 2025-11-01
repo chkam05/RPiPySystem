@@ -240,6 +240,8 @@ setup_venv() {
 
 # --- Start supervisord service (start application). ---
 start_supervisord() {
+    export VIRTUAL_ENV="$VENV_DIR"
+
     # Disable annoying pkg_resources deprecation warning (Python 3.13+)
     PYTHONWARNINGS="ignore:pkg_resources is deprecated as an API:UserWarning"
     export PYTHONWARNINGS
@@ -248,7 +250,7 @@ start_supervisord() {
     RUN_AS_USER="${USER:-$(id -un)}"
     export RUN_AS_USER
 
-    SUPERVISOR_SOCK="/tmp/supervisor-${RUN_AS_USER}.sock"
+    SUPERVISOR_SOCK="/tmp/supervisor-rpi.sock"
     export SUPERVISOR_SOCK
 
     printf '\n'
