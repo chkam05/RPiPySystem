@@ -93,10 +93,8 @@ class ProcessInfo:
             'properties': {
                 cls.FIELD_NAME: {'type': 'string', 'example': 'worker'},
                 cls.FIELD_STATE: {'type': 'string', 'example': 'RUNNING'},
-                cls.FIELD_PID: {'type': 'integer', 'nullable': True, 'example': 1234},
-            },
-            # If you want to force fields:
-            # 'required': [cls.FIELD_NAME, cls.FIELD_STATE, cls.FIELD_PID],
+                cls.FIELD_PID: {'type': 'integer', 'nullable': True, 'example': 1234}
+            }
         }
 
     @classmethod

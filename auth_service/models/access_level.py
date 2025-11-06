@@ -22,7 +22,7 @@ class AccessLevel(str, Enum):
         try:
             return cls(s.lower())
         except Exception:
-            raise ValueError(f'invalid access level: {s!r}')
+            raise ValueError(f'Invalid access level: {s!r}')
     
     def __str__(self) -> str:
         return self.value

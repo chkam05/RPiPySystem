@@ -1,0 +1,23 @@
+from utils.base_str_enum import BaseStrEnum
+
+
+class InterfaceFlag(BaseStrEnum):
+    ALLMULTI = 'ALLMULTI'
+    AUTOMEDIA = 'AUTOMEDIA'
+    BROADCAST = 'BROADCAST'
+    DEBUG = 'DEBUG'
+    DORMANT = 'DORMANT'
+    DYNAMIC = 'DYNAMIC'
+    ECHO = 'ECHO'
+    LOOPBACK = 'LOOPBACK'
+    LOWER_UP = 'LOWER_UP'
+    MASTER = 'MASTER'
+    MULTICAST = 'MULTICAST'
+    NOARP = 'NOARP'
+    NOTRAILERS = 'NOTRAILERS'
+    POINTOPOINT = 'POINTOPOINT'
+    PORTSEL = 'PORTSEL'
+    PROMISC = 'PROMISC'
+    RUNNING = 'RUNNING'
+    SLAVE = 'SLAVE'
+    UP = 'UP'
