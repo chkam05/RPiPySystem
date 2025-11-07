@@ -1,5 +1,23 @@
-1. Unifikacja konfiguracji swaggerów
-2. Konfiguracja autentykacji
-3. Praca z .env
-4. Dodanie autentykacji do reszty endpointów
-5. Logowanie (messages)
+1. INFO_SERVICE
+    [+] - Network Internal
+    [+] - Network External
+    [ ] - Wi-Fi Scan
+    [+] - System Info
+    [+] - System Usage (proc,ram,disk)
+    [+] - System Disks/Partitions
+    [ ] - System Processes
+    [ ] - System Users
+    [ ] - System Users Logged
+    [ ] - System SSH Connections
+2. BT_SERVICE
+    [ ] - On/Off
+    [ ] - Scan
+    [ ] - Connect/Disconnect (PAIR)
+    [ ] - Connected devices
+    [ ] - Send (timeout resp) COM (text/binary)
+    [ ] - Receive COM
+3. EMAIL_SERVICE
+    [ ] - List
+    [ ] - Send
+    [ ] - Read
+    [ ] - Remove

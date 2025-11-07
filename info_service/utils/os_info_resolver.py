@@ -19,6 +19,7 @@ class OSInfoResolver:
     # --- File paths ---
     OS_RELEASE_PATH: ClassVar[str] = '/etc/os-release'
 
+
     def __new__(cls, *args, **kwargs):
         """
         Prevent instantiation of this static utility class.
