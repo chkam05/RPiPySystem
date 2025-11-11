@@ -1,22 +1,26 @@
 from typing import ClassVar
 
 from flask import jsonify, request
-from info_service.models.system.disk_usage import DiskUsage
-from info_service.models.system.mem_usage import MemUsage
-from info_service.models.system.os_info import OSInfo
-from info_service.models.system.os_temp_info import OSTempInfo
-from info_service.models.system.os_usage import OSUsage
-from info_service.models.system.cpu_info import CPUInfo
-from info_service.models.system.cpu_usage import CPUUsage
-from info_service.utils.os_info_resolver import OSInfoResolver
-from info_service.utils.os_usage_resolver import OSUsageResolver
-from utils.auto_swag import auto_swag, ok, qparam, unauthorized
+from supervisor_service.models.process_info import ProcessInfo
+from system_service.models.system.disk_usage import DiskUsage
+from system_service.models.system.mem_usage import MemUsage
+from system_service.models.system.os_info import OSInfo
+from system_service.models.system.os_temp_info import OSTempInfo
+from system_service.models.system.os_usage import OSUsage
+from system_service.models.system.cpu_info import CPUInfo
+from system_service.models.system.cpu_usage import CPUUsage
+from system_service.models.system.process_info_request import ProcessInfoRequest
+from system_service.utils.os_info_resolver import OSInfoResolver
+from system_service.utils.os_usage_resolver import OSUsageResolver
+from system_service.utils.process_info_resolver import ProcessInfoResolver
+from utils.auto_swag import auto_swag, ok, qparam, request_body_json, unauthorized
+from utils.format_util import FormatUtil
 from utils.mid_auth_controller import MidAuthController
 
 
-class SystemController(MidAuthController):
-    _CONTROLLER_NAME: ClassVar[str] = 'info_system'
-    _CONTROLLER_PATH: ClassVar[str] = 'system'
+class InfoController(MidAuthController):
+    _CONTROLLER_NAME: ClassVar[str] = 'system_info'
+    _CONTROLLER_PATH: ClassVar[str] = 'info'
     _CPU_USAGE_F_SAMPLE_EXACT: ClassVar[str] = 'cpu_sample_exact'
     _CPU_USAGE_F_SAMPLE_TIME: ClassVar[str] = 'cpu_sample_time'
 
@@ -29,9 +33,10 @@ class SystemController(MidAuthController):
 
         super().__init__(self._CONTROLLER_NAME, __name__, url_prefix, auth_url)
     
-    def register_routes(self) -> 'SystemController':
-        self.add_url_rule('/info', view_func=self.get_info, methods=['GET'])
-        self.add_url_rule('/info/cpu', view_func=self.get_cpu_info, methods=['GET'])
+    def register_routes(self) -> 'InfoController':
+        self.add_url_rule('/', view_func=self.get_info, methods=['GET'])
+        self.add_url_rule('/cpu', view_func=self.get_cpu_info, methods=['GET'])
+        self.add_url_rule('/processes', view_func=self.get_processes, methods=['POST'])
         self.add_url_rule('/usage', view_func=self.get_usage, methods=['GET'])
         self.add_url_rule('/usage/cpu', view_func=self.get_cpu_usage, methods=['GET'])
         self.add_url_rule('/usage/disks', view_func=self.get_disks_usage, methods=['GET'])
@@ -74,6 +79,30 @@ class SystemController(MidAuthController):
 
         cpu_info = OSUsageResolver.get_cpu_info()
         return jsonify(cpu_info.to_public()), 200
+
+    @auto_swag(
+        tags=['system'],
+        summary='Get list of current processes — Root Only',
+        description='Returns list of processes currently running in system.',
+        request_body=request_body_json(ProcessInfoRequest.schema_get_request()),
+        responses={
+            200: ok(ProcessInfo.schema_public()),
+            401: unauthorized('Missing/invalid token'),
+        },
+    )
+    def get_processes(self):
+        ok_, err, code = self._require_root()
+        if not ok_:
+            return jsonify(err), code
+        
+        raw_data = request.get_json(silent=True)
+        data = ProcessInfoRequest.from_dict(raw_data) if raw_data else ProcessInfoRequest.default()
+
+        processes = ProcessInfoResolver.get_process_infos(data)
+        processes_dict = ProcessInfo.list_to_public(processes)
+        keep_null_fields = [k for k, v in data.to_dict().items() if v is True]
+
+        return jsonify(FormatUtil.list_without_nulls(processes_dict, keep_null_fields)), 200
 
     @auto_swag(
         tags=['system'],

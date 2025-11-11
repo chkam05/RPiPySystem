@@ -1,7 +1,7 @@
 from utils.flask_api_service import FlaskApiService
 
 
-class InfoService(FlaskApiService):
+class SystemService(FlaskApiService):
 
     def __init__(self):
         from .config import HOST, PORT, SERVICE_NAME
@@ -16,11 +16,11 @@ class InfoService(FlaskApiService):
         from .controllers.health_controller import HealthController
         from .controllers.external_network_controller import ExternalNetworkController
         from .controllers.internal_network_controller import InternalNetworkController
-        from .controllers.system_controller import SystemController
+        from .controllers.info_controller import InfoController
 
         base_url_prefix = API_ENDPOINT
 
         self._service.register_blueprint(HealthController(base_url_prefix))
         self._service.register_blueprint(ExternalNetworkController(base_url_prefix, AUTH_URL))
         self._service.register_blueprint(InternalNetworkController(base_url_prefix, AUTH_URL))
-        self._service.register_blueprint(SystemController(base_url_prefix, AUTH_URL))
+        self._service.register_blueprint(InfoController(base_url_prefix, AUTH_URL))

@@ -2,7 +2,7 @@ from ipaddress import ip_address
 from typing import ClassVar, Optional
 from urllib.request import urlopen
 
-from info_service.models.external.external_network_info import ExternalNetworkInfo
+from system_service.models.external.external_network_info import ExternalNetworkInfo
 
 
 class ExternalNetworkResolver:

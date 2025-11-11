@@ -6,7 +6,7 @@ from utils.base_controller import BaseController
 
 
 class HealthController(BaseController):
-    _CONTROLLER_NAME: ClassVar[str] = 'info_health'
+    _CONTROLLER_NAME: ClassVar[str] = 'system_health'
     _CONTROLLER_PATH: ClassVar[str] = 'health'
 
     def __init__(self, url_prefix_base: str) -> None:
@@ -19,7 +19,7 @@ class HealthController(BaseController):
         super().__init__(self._CONTROLLER_NAME, __name__, url_prefix)
     
     def register_routes(self) -> 'HealthController':
-        self.add_url_rule('/health', view_func=self.health, methods=['GET'])
+        self.add_url_rule('/', view_func=self.health, methods=['GET'])
         return self
 
     # --- ENDPOINTS ---

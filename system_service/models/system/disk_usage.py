@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, ClassVar, Dict, List, Optional
 
-from info_service.models.system.disk_type import DiskType
+from system_service.models.system.disk_type import DiskType
 
 
 @dataclass

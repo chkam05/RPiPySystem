@@ -1,14 +1,14 @@
 from typing import ClassVar
 
 from flask import jsonify
-from info_service.models.internal.interface_info import InterfaceInfo
-from info_service.utils.network_interfaces_resolver import NetworkInterfacesResolver
+from system_service.models.internal.interface_info import InterfaceInfo
+from system_service.utils.network_interfaces_resolver import NetworkInterfacesResolver
 from utils.auto_swag import auto_swag, ok, unauthorized
 from utils.mid_auth_controller import MidAuthController
 
 
 class InternalNetworkController(MidAuthController):
-    _CONTROLLER_NAME: ClassVar[str] = 'info_network_internal'
+    _CONTROLLER_NAME: ClassVar[str] = 'system_network_internal'
     _CONTROLLER_PATH: ClassVar[str] = 'network/internal'
 
     def __init__(self, url_prefix_base: str, auth_url: str) -> None:

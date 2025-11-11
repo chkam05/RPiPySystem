@@ -2,12 +2,12 @@ import re
 import subprocess
 from typing import ClassVar, List, Optional, Tuple, Pattern
 
-from info_service.models.internal.interface_channel import InterfaceChannel
-from info_service.models.internal.interface_device import InterfaceDevice
-from info_service.models.internal.interface_flag import InterfaceFlag
-from info_service.models.internal.interface_info import InterfaceInfo
-from info_service.models.internal.interface_scope_id import InterfaceScopeId
-from info_service.models.internal.interface_statistics import InterfaceStatistics
+from system_service.models.internal.interface_channel import InterfaceChannel
+from system_service.models.internal.interface_device import InterfaceDevice
+from system_service.models.internal.interface_flag import InterfaceFlag
+from system_service.models.internal.interface_info import InterfaceInfo
+from system_service.models.internal.interface_scope_id import InterfaceScopeId
+from system_service.models.internal.interface_statistics import InterfaceStatistics
 
 
 class NetworkInterfacesResolver:

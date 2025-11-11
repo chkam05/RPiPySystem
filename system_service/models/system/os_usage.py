@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 from typing import Any, ClassVar, Dict, List, Optional
 
-from info_service.models.system.disk_usage import DiskUsage
-from info_service.models.system.mem_usage import MemUsage
-from info_service.models.system.os_temp_info import OSTempInfo
-from info_service.models.system.cpu_info import CPUInfo
-from info_service.models.system.cpu_usage import CPUUsage
+from system_service.models.system.disk_usage import DiskUsage
+from system_service.models.system.mem_usage import MemUsage
+from system_service.models.system.os_temp_info import OSTempInfo
+from system_service.models.system.cpu_info import CPUInfo
+from system_service.models.system.cpu_usage import CPUUsage
 
 
 @dataclass

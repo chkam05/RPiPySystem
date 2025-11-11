@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, ClassVar, Dict, List, Optional
 
-from info_service.models.internal.interface_channel import InterfaceChannel
+from system_service.models.internal.interface_channel import InterfaceChannel
 
 
 @dataclass

@@ -3,7 +3,7 @@ import re
 import subprocess
 from typing import ClassVar, Dict, Optional
 
-from info_service.models.system.os_info import OSInfo
+from system_service.models.system.os_info import OSInfo
 
 
 class OSInfoResolver:

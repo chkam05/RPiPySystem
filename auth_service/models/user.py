@@ -70,7 +70,7 @@ class User:
                 cls.FIELD_PASSWORD: {'type': 'string', 'minLength': 1, 'example': 'secret'},
                 cls.FIELD_LEVEL: {'type': 'string', 'enum': AccessLevel.get_all_str(), 'default': AccessLevel.USER.value},
             },
-            'required': [cls.FIELD_NAME, 'password'],
+            'required': [cls.FIELD_NAME, cls.FIELD_PASSWORD],
         }
     
     @classmethod

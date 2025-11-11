@@ -1,14 +1,14 @@
 from typing import ClassVar
 
 from flask import jsonify
-from info_service.models.external.external_network_info import ExternalNetworkInfo
-from info_service.utils.external_network_resolver import ExternalNetworkResolver
+from system_service.models.external.external_network_info import ExternalNetworkInfo
+from system_service.utils.external_network_resolver import ExternalNetworkResolver
 from utils.auto_swag import auto_swag, ok, unauthorized
 from utils.mid_auth_controller import MidAuthController
 
 
 class ExternalNetworkController(MidAuthController):
-    _CONTROLLER_NAME: ClassVar[str] = 'info_network_external'
+    _CONTROLLER_NAME: ClassVar[str] = 'system_network_external'
     _CONTROLLER_PATH: ClassVar[str] = 'network/external'
 
     def __init__(self, url_prefix_base: str, auth_url: str) -> None:

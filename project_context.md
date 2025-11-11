@@ -59,7 +59,7 @@ Katalog główny: /opt/RPiPySystem
     📄 app.py  (1 KB)
     📄 config.py  (0 KB)
     📄 swagger.py  (2 KB)
-  📁 info_service/
+  📁 system_service/
     📁 controllers/
       📄 health.py  (1 KB)
       📄 network.py  (1 KB)
@@ -243,7 +243,7 @@ whitenoise==6.7.0
 - `auth_service` → unknown
 - `control_service` → django
 - `email_service` → flask
-- `info_service` → flask
+- `system_service` → flask
 - `io_service` → flask
 - `supervisor_service` → unknown
 
@@ -257,7 +257,7 @@ whitenoise==6.7.0
 - `email_service/config.py`: BIND, PORT, SECRET, SMTP_FROM, SMTP_HOST, SMTP_PORT
 
 
-- `info_service/config.py`: BIND, PORT, SECRET
+- `system_service/config.py`: BIND, PORT, SECRET
 
 
 - `io_service/config.py`: BIND, PORT, SECRET
@@ -503,16 +503,16 @@ environment=PYTHONUNBUFFERED="1"
 ;stderr_logfile_maxbytes=0
 ;environment=PYTHONUNBUFFERED="1"
 
-;[program:info_service]
-;command=%(ENV_VIRTUAL_ENV)s/bin/python -u -m info_service.app
+;[program:system_service]
+;command=%(ENV_VIRTUAL_ENV)s/bin/python -u -m system_service.app
 ;autostart=true
 ;autorestart=unexpected      ; Not True
 ;exitcodes=0                 ; Only 0 is the "expected" output
 ;startsecs=10                ; Process must survive 10 seconds to be considered a successful start
 ;startretries=3              ; After 3 failed attempts -> FATAL
-;stdout_logfile=./logs/info_service.out
+;stdout_logfile=./logs/system_service.out
 ;stdout_logfile_maxbytes=0
-;stderr_logfile=./logs/info_service.err
+;stderr_logfile=./logs/system_service.err
 ;stderr_logfile_maxbytes=0
 ;environment=PYTHONUNBUFFERED="1"
 
@@ -543,7 +543,7 @@ environment=PYTHONUNBUFFERED="1"
 ;environment=PYTHONUNBUFFERED="1",GUNICORN_CMD_ARGS="--access-logfile - --error-logfile - --capture-output --enable-stdio-inheritance"
 
 ;[group:RaspberryPiSystem]
-;programs=supervisor_service,auth_service;,email_service,info_service,io_service,control_service
+;programs=supervisor_service,auth_service;,email_service,system_service,io_service,control_service
 
 ; Event listeners (event response logic)
 ; The eventlistener is a process that listens for Supervisor events.

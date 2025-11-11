@@ -6,13 +6,13 @@ from typing import Any, ClassVar, Dict, List, Optional, Tuple
 
 from flask import json
 
-from info_service.models.system.cpu_info import CPUInfo
-from info_service.models.system.cpu_usage import CPUUsage
-from info_service.models.system.disk_type import DiskType
-from info_service.models.system.disk_usage import DiskUsage
-from info_service.models.system.mem_usage import MemUsage
-from info_service.models.system.os_temp_info import OSTempInfo
-from info_service.models.system.os_usage import OSUsage
+from system_service.models.system.cpu_info import CPUInfo
+from system_service.models.system.cpu_usage import CPUUsage
+from system_service.models.system.disk_type import DiskType
+from system_service.models.system.disk_usage import DiskUsage
+from system_service.models.system.mem_usage import MemUsage
+from system_service.models.system.os_temp_info import OSTempInfo
+from system_service.models.system.os_usage import OSUsage
 
 
 class OSUsageResolver:
@@ -803,7 +803,7 @@ class OSUsageResolver:
         """
         Return consolidated OSUsage snapshot.
         """
-        cpu_usage = cls.get_cpu_usage(sample_seconds)
+        cpu_usage = cls.get_cpu_usage(sample_seconds, False)
         cpu = cls.get_cpu_info()
         temperature = cls.get_temperature()
         mem = cls.get_memory_usage()

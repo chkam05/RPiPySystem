@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 from typing import Any, ClassVar, Dict, List, Optional
 
-from info_service.models.internal.interface_device import InterfaceDevice
-from info_service.models.internal.interface_flag import InterfaceFlag
-from info_service.models.internal.interface_scope_id import InterfaceScopeId
-from info_service.models.internal.interface_statistics import InterfaceStatistics
+from system_service.models.internal.interface_device import InterfaceDevice
+from system_service.models.internal.interface_flag import InterfaceFlag
+from system_service.models.internal.interface_scope_id import InterfaceScopeId
+from system_service.models.internal.interface_statistics import InterfaceStatistics
 
 
 @dataclass
