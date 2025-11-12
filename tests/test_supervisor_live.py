@@ -10,13 +10,13 @@ from supervisor_service.models.process_info import ProcessInfo
 from tests.common.authenticator import Authenticator
 from tests.common.http_client import HttpClient
 from tests.common.test_framework import SimpleTestCase, testcase
-from tests.conf import BASE_AUTH, BASE_SUPERVISOR
+from tests.conf import AUTH_LOGIN, AUTH_PASSWORD, BASE_AUTH, BASE_SUPERVISOR
 
 
 class SupervisorLiveTests(SimpleTestCase):
     def config(self) -> None:
-        self.username = 'root'
-        self.password = 'password'
+        self.username = AUTH_LOGIN
+        self.password = AUTH_PASSWORD
         self.auth = Authenticator(BASE_AUTH, self.username, self.password)
         self.client = HttpClient(BASE_SUPERVISOR, authenticator=self.auth)
 
@@ -53,7 +53,7 @@ class SupervisorLiveTests(SimpleTestCase):
             self.are_equal(state, 'RUNNING', f'process not RUNNING (#{idx}: {proc})')
     
     @testcase
-    def test_02_supervisor_processes_list(self) -> None:
+    def test_02_supervisor_process(self) -> None:
         self.is_instance_of_type(self.service, dict)
         full_name = self.service.get(ProcessInfo.FIELD_NAME)
         pid = self.service.get(ProcessInfo.FIELD_PID)

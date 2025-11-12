@@ -1,14 +1,12 @@
 1. SYSTEM_SERVICE
     [+] - Network Internal
     [+] - Network External
-    [ ] - Wi-Fi Scan
     [+] - System Info
     [+] - System Usage (proc,ram,disk)
     [+] - System Disks/Partitions
     [+] - System Processes
     [+] - System Users
     [+] - System Users Logged
-    [+] - System SSH Connections
 2. BT_SERVICE
     [ ] - On/Off
     [ ] - Scan

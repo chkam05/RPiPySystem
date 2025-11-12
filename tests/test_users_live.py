@@ -12,13 +12,13 @@ from auth_service.models.user import User
 from tests.common.authenticator import Authenticator
 from tests.common.http_client import HttpClient
 from tests.common.test_framework import SimpleTestCase, testcase
-from tests.conf import BASE_AUTH
+from tests.conf import AUTH_LOGIN, AUTH_PASSWORD, BASE_AUTH
 
 
 class UsersManagementLiveTests(SimpleTestCase):
     def config(self) -> None:
-        self.username = 'root'
-        self.password = 'password'
+        self.username = AUTH_LOGIN
+        self.password = AUTH_PASSWORD
         self.auth = Authenticator(BASE_AUTH, self.username, self.password)
         self.client = HttpClient(BASE_AUTH, authenticator=self.auth)
     
