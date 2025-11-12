@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Union, Callable
 from functools import wraps
 from flasgger import swag_from
+from flask import request
 
 JSONSchema = Dict[str, Any]
 ResponseObject = Dict[str, Any]
@@ -84,6 +85,20 @@ def hparam(name: str, schema: JSONSchema, description: str = '') -> Dict[str, An
 
 def cparam(name: str, schema: JSONSchema, description: str = '') -> Dict[str, Any]:
     return {'in': 'cookie', 'name': name, 'schema': schema, **({'description': description} if description else {})}
+
+def get_bool_query_arg(name: str, default: bool = False) -> bool:
+    """Safely parse boolean query argument."""
+    val = request.args.get(name)
+    if val is None:
+        return default
+    if isinstance(val, bool):
+        return val
+    val = val.strip().lower()
+    if val in ('true', '1', 'yes', 'y', 'on'):
+        return True
+    if val in ('false', '0', 'no', 'n', 'off'):
+        return False
+    return default
 
 # --------------------------------------------------------------------------------
 # --- Schema Helpers ---

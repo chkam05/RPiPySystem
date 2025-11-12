@@ -17,10 +17,12 @@ class SystemService(FlaskApiService):
         from .controllers.external_network_controller import ExternalNetworkController
         from .controllers.internal_network_controller import InternalNetworkController
         from .controllers.info_controller import InfoController
+        from .controllers.usage_controller import UsageController
 
         base_url_prefix = API_ENDPOINT
 
         self._service.register_blueprint(HealthController(base_url_prefix))
         self._service.register_blueprint(ExternalNetworkController(base_url_prefix, AUTH_URL))
         self._service.register_blueprint(InternalNetworkController(base_url_prefix, AUTH_URL))
-        self._service.register_blueprint(InfoController(base_url_prefix, AUTH_URL))
+        self._service.register_blueprint(InfoController(base_url_prefix, AUTH_URL, self))
+        self._service.register_blueprint(UsageController(base_url_prefix, AUTH_URL))
