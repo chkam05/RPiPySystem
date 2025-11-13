@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 import subprocess
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import Any, ClassVar, Dict, Iterable, List, Optional, Union
 
 from system_service.models.system.process_info import ProcessInfo
 from system_service.models.system.process_info_dto import ProcessInfoDto
@@ -8,10 +8,128 @@ from system_service.models.system.process_info_request import ProcessInfoRequest
 
 
 class ProcessInfoResolver:
-    """Run ps(1), parse rows into ProcessInfoDto, then map to ProcessInfo."""
+    """Resolve process information using ps command."""
 
-    # Month names/abbreviations map for parsing lstart.
-    _MONTHS = {
+    # Map ps column name -> fixed width (for :WIDTH spec)
+    _PS_COLUMN_WIDTHS: ClassVar[Dict[str, int]] = {
+        'pid': 6,
+        'ppid': 6,
+        'pgid': 6,
+        'uid': 4,
+        'ruid': 4,
+        'pri': 4,
+        'priority': 4,
+        'vsz': 8,
+        'rss': 8,
+        'psr': 2,
+        'nlwp': 2,
+        'thcount': 1,
+        'flags': 1,
+        'f': 1,
+        'maj_flt': 8,
+        'min_flt': 8,
+        'sid': 6,
+        'tgid': 6,
+        'sess': 6,
+        '%cpu': 6,
+        '%mem': 6,
+        'stat': 4,
+        'state': 4,
+        'tty': 16,
+        'nice': 4,
+        'cls': 4,
+        'policy': 4,
+        'rtprio': 4,
+        'cpu': 4,
+        'user': 32,
+        'ruser': 32,
+        'cgroup': 128,
+        'wchan': 32,
+        'cputime': 16,
+        'time': 16,
+        'etime': 24,
+        'start': 16,
+        'start_time': 16,
+        'lstart': 32,
+        'comm': 64,
+        'args': 512,
+        'cmd': 512,
+    }
+
+    # Map ps column name -> DTO field name
+    _PS_COLUMN_TO_DTO_FIELD: ClassVar[Dict[str, str]] = {
+        'pid': ProcessInfoDto.FIELD_PID,
+        'ppid': ProcessInfoDto.FIELD_PPID,
+        'pgid': ProcessInfoDto.FIELD_PGID,
+        'uid': ProcessInfoDto.FIELD_UID,
+        'ruid': ProcessInfoDto.FIELD_RUID,
+        'pri': ProcessInfoDto.FIELD_PRI,
+        'priority': ProcessInfoDto.FIELD_PRIORITY,
+        'vsz': ProcessInfoDto.FIELD_VSZ,
+        'rss': ProcessInfoDto.FIELD_RSS,
+        'psr': ProcessInfoDto.FIELD_PSR,
+        'nlwp': ProcessInfoDto.FIELD_NLWP,
+        'thcount': ProcessInfoDto.FIELD_THCOUNT,
+        'flags': ProcessInfoDto.FIELD_FLAGS,
+        'f': ProcessInfoDto.FIELD_F,
+        'maj_flt': ProcessInfoDto.FIELD_MAJ_FLT,
+        'min_flt': ProcessInfoDto.FIELD_MIN_FLT,
+        'sid': ProcessInfoDto.FIELD_SID,
+        'tgid': ProcessInfoDto.FIELD_TGID,
+        'sess': ProcessInfoDto.FIELD_SESS,
+        '%cpu': ProcessInfoDto.FIELD_PCPU,
+        '%mem': ProcessInfoDto.FIELD_PMEM,
+        'stat': ProcessInfoDto.FIELD_STAT,
+        'state': ProcessInfoDto.FIELD_STATE,
+        'tty': ProcessInfoDto.FIELD_TTY,
+        'nice': ProcessInfoDto.FIELD_NICE,
+        'cls': ProcessInfoDto.FIELD_CLS,
+        'policy': ProcessInfoDto.FIELD_POLICY,
+        'rtprio': ProcessInfoDto.FIELD_RTPRIO,
+        'cpu': ProcessInfoDto.FIELD_CPU,
+        'user': ProcessInfoDto.FIELD_USER,
+        'ruser': ProcessInfoDto.FIELD_RUSER,
+        'cgroup': ProcessInfoDto.FIELD_CGROUP,
+        'wchan': ProcessInfoDto.FIELD_WCHAN,
+        'cputime': ProcessInfoDto.FIELD_CPUTIME,
+        'time': ProcessInfoDto.FIELD_TIME,
+        'etime': ProcessInfoDto.FIELD_ETIME,
+        'start': ProcessInfoDto.FIELD_START,
+        'start_time': ProcessInfoDto.FIELD_START_TIME,
+        'lstart': ProcessInfoDto.FIELD_LSTART,
+        'comm': ProcessInfoDto.FIELD_COMM,
+        'args': ProcessInfoDto.FIELD_ARGS,
+        'cmd': ProcessInfoDto.FIELD_CMD,
+    }
+
+    # DTO fields that should be converted to int
+    _INT_FIELDS: ClassVar[set] = {
+        ProcessInfoDto.FIELD_PID,
+        ProcessInfoDto.FIELD_PPID,
+        ProcessInfoDto.FIELD_PGID,
+        ProcessInfoDto.FIELD_UID,
+        ProcessInfoDto.FIELD_RUID,
+        ProcessInfoDto.FIELD_PRI,
+        ProcessInfoDto.FIELD_VSZ,
+        ProcessInfoDto.FIELD_RSS,
+        ProcessInfoDto.FIELD_PSR,
+        ProcessInfoDto.FIELD_NLWP,
+        ProcessInfoDto.FIELD_F,
+        ProcessInfoDto.FIELD_MAJ_FLT,
+        ProcessInfoDto.FIELD_MIN_FLT,
+        ProcessInfoDto.FIELD_SID,
+        ProcessInfoDto.FIELD_TGID,
+        ProcessInfoDto.FIELD_NICE,
+    }
+
+    # DTO fields that should be converted to float
+    _FLOAT_FIELDS: ClassVar[set] = {
+        ProcessInfoDto.FIELD_PCPU,
+        ProcessInfoDto.FIELD_PMEM,
+    }
+
+    # Month names for lstart parsing (English + Polish)
+    _MONTHS: ClassVar[Dict[str, int]] = {
         'jan': 1,
         'feb': 2,
         'mar': 3,
@@ -35,122 +153,10 @@ class ProcessInfoResolver:
         'wrz': 9,
         'paź': 10,
         'paz': 10,
+        'październik': 10,
         'lis': 11,
         'gru': 12,
     }
-    
-    # Weekday names (ignored, but must be recognized).
-    _WEEKDAYS = {
-        'mon',
-        'tue',
-        'wed',
-        'thu',
-        'fri',
-        'sat',
-        'sun',
-        'pon',
-        'wto',
-        'śro',
-        'sro',
-        'czw',
-        'pią',
-        'pia',
-        'sob',
-        'nie',
-    }
-
-    # ps columns (full superset) in stable canonical order (without 'args'/'cmd').
-    _CANONICAL_PREFIX: List[str] = [
-        'pid',
-        'ppid',
-        'pgid',
-        'user',
-        'uid',
-        'ruser',
-        'ruid',
-        'comm',
-        '%cpu',
-        '%mem',
-        'cputime',
-        'etime',
-        'time',
-        'start',
-        'start_time'
-    ]
-
-    _CANONICAL_AFTER_LSTART: List[str] = [
-        'stat',
-        'state',
-        'tty',
-        'pri',
-        'priority',
-        'nice',
-        'cls',
-        'policy',
-        'rtprio',
-        'vsz',
-        'rss',
-        'psr',
-        'cpu',
-        'cgroup',
-        'nlwp',
-        'thcount',
-        'wchan',
-        'flags',
-        'f',
-        'maj_flt',
-        'min_flt',
-        'sid',
-        'tgid',
-        'sess'
-    ]
-
-    # Subset safe to split on whitespace (when 'args' or 'cmd' is last).
-    _FIXED_BEFORE_ARGS: List[str] = [
-        'pid',
-        'ppid',
-        'pgid',
-        'user',
-        'uid',
-        'ruser',
-        'ruid',
-        'comm',
-        '%cpu',
-        '%mem',
-        'cputime',
-        'etime',
-        'time',
-        'start', 
-        'start_time',
-        'lstart',
-        'stat',
-        'state',
-        'tty',
-        'pri',
-        'priority',
-        'nice',
-        'cls',
-        'policy',
-        'rtprio',
-        'vsz',
-        'rss',
-        'psr',
-        'cpu',
-        'cgroup',
-        'nlwp',
-        'thcount',
-        'wchan',
-        'flags',
-        'f',
-        'maj_flt',
-        'min_flt',
-        'sid',
-        'tgid',
-        'sess',
-    ]
-
-    # Safe field separator for ps output (unit separator, U+001F) – kept for reference.
-    _SEP: str = '\x1f'
 
 
     def __new__(cls, *args, **kwargs):
@@ -158,449 +164,405 @@ class ProcessInfoResolver:
         Prevent instantiation of this static utility class.
         """
         raise TypeError(f'{cls.__name__} is a static utility class and cannot be instantiated.')
-    
+
     # --------------------------------------------------------------------------
-    # --- HELPER FUNCTIONS FOR PARSING ---
+    # --- BUILD AND RUN ps COMMAND METHODS. ---
     # --------------------------------------------------------------------------
 
     @classmethod
-    def _select_command_line(cls, dto: ProcessInfoDto) -> Optional[str]:
+    def _build_ps_plan(cls, request: ProcessInfoRequest) -> List[tuple]:
         """
-        Return args or cmd depending on availability.
+        Build ps column plan based on request.
         """
-        def clean(x: Optional[str]) -> Optional[str]:
-            if x is None:
-                return None
-            x = x.strip()
-            return None if x in ('-', '') else x
-        return clean(dto.args) or clean(dto.cmd)
+        plan: List[tuple] = []
+        used_columns: set = set()
+
+        def add(ps_col: str) -> None:
+            if ps_col in used_columns:
+                return
+            if ps_col not in cls._PS_COLUMN_WIDTHS:
+                return
+            dto_field = cls._PS_COLUMN_TO_DTO_FIELD.get(ps_col)
+            if not dto_field:
+                return
+            width = cls._PS_COLUMN_WIDTHS[ps_col]
+            plan.append((ps_col, dto_field, width))
+            used_columns.add(ps_col)
+
+        # IDs.
+        if request.process_id:
+            add('pid')
+        if request.parent_process_id:
+            add('ppid')
+        if request.process_group_id:
+            add('pgid')
+
+        # Users.
+        if request.user_name:
+            add('user')
+        if request.user_id:
+            add('uid')
+        if request.real_user_name:
+            add('ruser')
+        if request.real_user_id:
+            add('ruid')
+
+        # Names and command line.
+        if request.process_name:
+            add('comm')
+        if request.command_line:
+            add('args')
+
+        # CPU and memory.
+        if request.cpu_usage_percent:
+            add('%cpu')
+        if request.memory_usage_percent:
+            add('%mem')
+        if request.cpu_process_time:
+            add('cputime')
+        if request.elapsed_since_start:
+            add('etime')
+        if request.started_at:
+            add('lstart')
+
+        # Status and terminal.
+        if request.status:
+            add('stat')
+        if request.terminal:
+            add('tty')
+
+        # Scheduling and priority.
+        if request.priority:
+            add('pri')
+        if request.nice_value:
+            add('nice')
+        if request.scheduler_class:
+            add('cls')
+        if request.scheduler_policy:
+            add('policy')
+        if request.realtime_priority:
+            add('rtprio')
+
+        # Memory.
+        if request.virtual_memory_kb:
+            add('vsz')
+        if request.resident_memory_kb:
+            add('rss')
+
+        # CPU placement and cgroup.
+        if request.current_cpu:
+            add('psr')
+        if request.cgroup_path:
+            add('cgroup')
+
+        # Threads and wait info.
+        if request.threads:
+            add('nlwp')
+        if request.wait_channel:
+            add('wchan')
+
+        # Flags and faults.
+        if request.kernel_flags:
+            add('flags')
+        if request.major_page_faults:
+            add('maj_flt')
+        if request.minor_page_faults:
+            add('min_flt')
+
+        # Session and thread group.
+        if request.session_id:
+            add('sid')
+        if request.thread_group_id:
+            add('tgid')
+
+        # Ensure at least one column for ps correctness.
+        if not plan:
+            add('pid')
+
+        return plan
 
     @classmethod
-    def _num(cls, v: Optional[Union[str, float, int]]) -> Optional[float]:
+    def _build_ps_format(cls, plan: List[tuple]) -> str:
         """
-        Convert numeric-like values into float or None.
+        Build ps -o format string from plan.
         """
-        if v is None or v == '-':
-            return None
+        parts: List[str] = []
+        for ps_col, _dto_field, width in plan:
+            parts.append(f'{ps_col}:{width}')
+        return ','.join(parts)
+
+    @classmethod
+    def _run_ps(cls, ps_format: str) -> str:
+        """
+        Run ps command and return stdout as text.
+        """
         try:
-            return float(v)
-        except (ValueError, TypeError):
-            return None
+            proc = subprocess.run(
+                ['ps', '-ww', '-eo', ps_format],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=False,
+            )
+        except Exception:
+            return ''
+        if proc.returncode != 0:
+            return ''
+        return proc.stdout or ''
 
-    @classmethod
-    def _parse_duration(cls, s: Optional[str]) -> Optional[timedelta]:
+    # --------------------------------------------------------------------------
+    # --- PARSING AND CONVERTING DATA METHODS. ---
+    # --------------------------------------------------------------------------
+
+    @staticmethod
+    def _to_float(v: str) -> Optional[float]:
         """
-        Convert duration-like ps values into timedelta.
+        Convert string to float or return None.
         """
-        if not s or s == '-':
-            return None
-        s = s.strip()
-
-        days = 0
-        if '-' in s:
-            # Format D-HH:MM:SS.
-            day_part, s = s.split('-', 1)
-            try:
-                days = int(day_part)
-            except ValueError:
-                return None
-
-        parts = s.split(':')
         try:
-            if len(parts) == 3:
-                h, m, sec = map(int, parts)
-            elif len(parts) == 2:
-                h, m, sec = 0, int(parts[0]), int(parts[1])
-            else:
-                return None
-        except ValueError:
+            return float(v.replace(',', '.'))
+        except Exception:
             return None
 
-        return timedelta(days=days, hours=h, minutes=m, seconds=sec)
+    @staticmethod
+    def _to_int(v: str) -> Optional[int]:
+        """
+        Convert string to int or return None.
+        """
+        try:
+            return int(v, 10)
+        except Exception:
+            return None
 
     @classmethod
-    def _parse_started_at(cls, dto: ProcessInfoDto) -> Optional[datetime]:
+    def _parse_start_datetime(cls, dto: ProcessInfoDto) -> Optional[datetime]:
         """
-        Parse full datetime from lstart field.
+        Parse start datetime from lstart/start fields.
         """
-        if dto.lstart and dto.lstart != '-':
-            dt = cls._parse_lstart_like(dto.lstart)
-            if dt:
-                return dt
-        return None
-
-    @classmethod
-    def _parse_lstart_like(cls, text: str) -> Optional[datetime]:
-        """
-        Parse lstart formatted string '<dow> <mon> <day> HH:MM:SS YYYY>'.
-        """
+        s = dto.lstart or dto.start_time or dto.start
+        if not s:
+            return None
+        text = str(s).strip()
         if not text:
             return None
 
-        parts = [p for p in text.split() if p]
-        normalized = [cls._norm_token(p) for p in parts]
+        parts = text.split()
+        if len(parts) < 5:
+            return None
 
-        if len(normalized) < 5:
+        # Expected: WEEKDAY MONTH DAY HH:MM:SS YEAR
+        month_token = parts[1].lower()
+        day_str = parts[2]
+        time_str = parts[3]
+        year_str = parts[4]
+
+        month = cls._MONTHS.get(month_token)
+        if not month:
             return None
 
         try:
-            year = int(normalized[-1])
-        except ValueError:
-            return None
-
-        # Identify time token (HH:MM:SS).
-        time_val = next((p for p in normalized if p.count(':') == 2), None)
-        if not time_val:
-            return None
-
-        # Identify month.
-        mon_idx = None
-        for i, token in enumerate(normalized):
-            if token in cls._MONTHS:
-                mon_idx = i
-                break
-        if mon_idx is None:
+            day = int(day_str)
+            year = int(year_str)
+            h_str, m_str, s_str = time_str.split(':')
+            hour = int(h_str)
+            minute = int(m_str)
+            second = int(s_str)
+        except Exception:
             return None
 
         try:
-            month = cls._MONTHS[normalized[mon_idx]]
-        except KeyError:
-            return None
-
-        # Day follows month.
-        try:
-            day = int(normalized[mon_idx + 1])
-        except (ValueError, IndexError):
-            return None
-
-        try:
-            h, m, s = map(int, time_val.split(':'))
-        except ValueError:
-            return None
-
-        try:
-            return datetime(year, month, day, h, m, s)
+            return datetime(year, month, day, hour, minute, second)
         except Exception:
             return None
 
     @classmethod
-    def _norm_token(cls, t: str) -> str:
+    def _parse_fixed_width_line(cls, line: str, plan: List[tuple]) -> Dict[str, Optional[str]]:
         """
-        Normalize token by removing diacritics and lowercasing.
+        Parse one fixed-width ps line into raw dict of strings.
         """
-        return t.strip().lower().translate(str.maketrans({
-            'ś': 's', 'ł': 'l', 'ó': 'o', 'ą': 'a',
-            'ę': 'e', 'ż': 'z', 'ź': 'z', 'ć': 'c', 'ń': 'n'
-        }))
-
-    # --------------------------------------------------------------------------
-    # --- LOW-LEVEL MAPPING / CASTING HELPERS ---
-    # --------------------------------------------------------------------------
-
-    @classmethod
-    def _map_and_cast(cls, raw: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Map raw ps keys to DTO keys and cast integers where safe.
-        """
-        mapped: Dict[str, Any] = {}
-        for k, v in raw.items():
-            if k == '%cpu':
-                mapped['pcpu'] = v
-            elif k == '%mem':
-                mapped['pmem'] = v
-            else:
-                mapped[k] = v
-
-        int_fields = {
-            'pid', 'ppid', 'pgid', 'uid', 'ruid', 'pri', 'priority', 'nice',
-            'rtprio', 'vsz', 'rss', 'psr', 'cpu', 'nlwp', 'thcount',
-            'maj_flt', 'min_flt', 'sid', 'tgid', 'sess'
-        }
-        for key in int_fields:
-            val = mapped.get(key)
-            if val not in (None, '-', ''):
-                try:
-                    mapped[key] = int(val)
-                except ValueError:
-                    pass
-        return mapped
-
-    @classmethod
-    def _safe_int(cls, v: Any) -> Optional[int]:
-        """
-        Convert to int or return None.
-        """
-        try:
-            return int(v) if v not in (None, '', '-') else None
-        except Exception:
-            return None
-
-    # --------------------------------------------------------------------------
-    # --- COLUMN SELECTION BASED ON ProcessInfoRequest ---
-    # --------------------------------------------------------------------------
-
-    @classmethod
-    def _columns_for_request(cls, request: ProcessInfoRequest, last_wide: Optional[str]) -> List[str]:
-        """Build ordered ps column list driven by ProcessInfoRequest."""
-        # Always include pid to identify and merge rows.
-        selected: set[str] = {'pid'}
-
-        # Map ProcessInfoRequest booleans to ps fields.
-        if request.parent_process_id: selected.add('ppid')
-        if request.process_group_id: selected.add('pgid')
-
-        if request.user_name: selected.add('user')
-        if request.user_id: selected.add('uid')
-        if request.real_user_name: selected.add('ruser')
-        if request.real_user_id: selected.add('ruid')
-
-        if request.process_name: selected.add('comm')
-
-        # command_line handled by last_wide ('args' / 'cmd'); but if requested, we include none of them here
-        # and let last_wide append them at the end.
-        # CPU/mem usage
-        if request.cpu_usage_percent: selected.add('%cpu')
-        if request.memory_usage_percent: selected.add('%mem')
-
-        # Durations
-        if request.cpu_process_time:
-            selected.add('cputime')
-            selected.add('time')  # keep both, resolver prefers cputime then time
-        if request.elapsed_since_start: selected.add('etime')
-
-        # Datetime
-        if request.started_at:
-            selected.add('lstart')  # full start datetime; far safer than parsing 'start'
-
-        if request.status: selected.add('stat')
-        if request.terminal: selected.add('tty')
-
-        if request.priority: selected.add('pri')
-        if request.nice_value: selected.add('nice')
-        if request.scheduler_class: selected.add('cls')
-        if request.scheduler_policy: selected.add('policy')
-        if request.realtime_priority: selected.add('rtprio')
-
-        if request.virtual_memory_kb: selected.add('vsz')
-        if request.resident_memory_kb: selected.add('rss')
-
-        if request.current_cpu: selected.add('psr')
-        if request.cgroup_path: selected.add('cgroup')
-        if request.threads: selected.add('nlwp')
-        if request.wait_channel: selected.add('wchan')
-        if request.kernel_flags:
-            selected.add('flags')
-            selected.add('f')
-        if request.major_page_faults: selected.add('maj_flt')
-        if request.minor_page_faults: selected.add('min_flt')
-        if request.session_id: selected.add('sid')
-        if request.thread_group_id: selected.add('tgid')
-
-        # Build ordered list: prefix ∩ selected, then optional lstart, then after_lstart ∩ selected, finally last_wide.
-        columns: List[str] = []
-        for k in cls._CANONICAL_PREFIX:
-            if k in selected:
-                columns.append(k)
-        has_lstart = 'lstart' in selected
-        if has_lstart:
-            columns.append('lstart')
-        for k in cls._CANONICAL_AFTER_LSTART:
-            if k in selected:
-                columns.append(k)
-        if last_wide:
-            columns.append(last_wide)
-        return columns
-
-    # --------------------------------------------------------------------------
-    # --- BUILD AND EXEC ps(1). ---
-    # --------------------------------------------------------------------------
-
-    @classmethod
-    def _build_ps_cmd_with_columns(cls, columns: List[str]) -> List[str]:
-        """
-        Build ps command with provided columns (last column may be wide).
-        """
-        fmt = ','.join(columns)
-        return ['ps', '-ww', '-eo', fmt, '--no-headers']
-
-    @classmethod
-    def _run_ps_generic(cls, cmd: List[str]) -> List[str]:
-        """
-        Execute ps command and return each non-empty output line.
-        """
-        try:
-            output = subprocess.check_output(cmd, text=True, stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError as e:
-            raise RuntimeError(f'ps failed with exit code {e.returncode}: {e.output.strip()}') from e
-        return [line.rstrip('\n') for line in output.splitlines() if line.strip() != '']
-    
-    # --------------------------------------------------------------------------
-    # -- GENERIC PARSER FOR VARIABLE COLUMN SETS (last_wide optional) --
-    # --------------------------------------------------------------------------
-
-    @classmethod
-    def _parse_line_with_columns(cls, line: str, columns: List[str]) -> Optional[Dict[str, Any]]:
-        """
-        Parse a ps line for a specific ordered column set; last column may be wide.
-        """
-        tokens = line.split()
-        if not tokens or not columns:
-            return None
-
-        last_wide = columns[-1] if columns[-1] in ('args', 'cmd') else None
-        has_lstart = 'lstart' in columns
-
-        # Split logical layout
-        if has_lstart:
-            idx_l = columns.index('lstart')
-            prefix_cols = columns[:idx_l]       # before lstart.
-            after_cols = columns[idx_l + 1:]    # after lstart (may include last_wide).
-        else:
-            prefix_cols = [c for c in columns if c not in ('args', 'cmd')]
-            after_cols = [c for c in columns if c not in prefix_cols]
-
-        # If wide is at the end, fixed-after = everything in after_cols except that wide.
-        after_fixed = after_cols[:-1] if (last_wide and after_cols and after_cols[-1] == last_wide) else after_cols
-
-        raw: Dict[str, Any] = {}
+        result: Dict[str, Optional[str]] = {}
         pos = 0
 
-        # 1) consume prefix columns from the left.
-        if len(tokens) < len(prefix_cols):
-            return None
-        for key in prefix_cols:
-            raw[key] = tokens[pos]
-            pos += 1
+        for idx, (_ps_col, dto_field, width) in enumerate(plan):
+            if idx == len(plan) - 1:
+                chunk = line[pos:]
+            else:
+                chunk = line[pos:pos + width]
+            value = chunk.rstrip() or None
+            result[dto_field] = value
+            if idx != len(plan) - 1:
+                pos += width + 1
 
-        # 2) consume lstart (exactly 5 tokens) from the left.
-        if has_lstart:
-            if len(tokens) < pos + 5:
-                return None
-            lstart_tokens = tokens[pos:pos + 5]
-            raw['lstart'] = ' '.join(lstart_tokens)
-            pos += 5
+        return result
+    
+    @classmethod
+    def _convert_types(cls, row: Dict[str, Optional[str]]) -> Dict[str, Any]:
+        """
+        Convert raw string values to int/float where needed.
+        """
+        out: Dict[str, Any] = {}
+        for key, value in row.items():
+            if value is None:
+                out[key] = None
+                continue
 
-        # 3) consume fixed-after columns sequentially from the left.
-        if len(tokens) < pos + len(after_fixed):
-            return None
-        for key in after_fixed:
-            raw[key] = tokens[pos]
-            pos += 1
+            text = value.strip()
+            if not text or text == '-':
+                out[key] = None
+                continue
 
-        # 4) the rest (if any) belongs to the wide last column at the very end.
-        if last_wide:
-            raw[last_wide] = ' '.join(tokens[pos:]) if pos < len(tokens) else None
+            if key in cls._INT_FIELDS:
+                out[key] = cls._to_int(text)
+            elif key in cls._FLOAT_FIELDS:
+                out[key] = cls._to_float(text)
+            else:
+                out[key] = text
+        return out
 
-        return cls._map_and_cast(raw)
+    @classmethod
+    def _parse_ps_output(cls, output: str, plan: List[tuple]) -> List[ProcessInfoDto]:
+        """
+        Parse ps command output into list of ProcessInfoDto.
+        """
+        lines = output.splitlines()
+        if not lines or len(lines) < 2:
+            return []
+
+        data_lines = lines[1:]
+        rows: List[Dict[str, Any]] = []
+
+        for line in data_lines:
+            if not line.strip():
+                continue
+            raw = cls._parse_fixed_width_line(line, plan)
+            typed = cls._convert_types(raw)
+            rows.append(typed)
+
+        return ProcessInfoDto.list_from_dicts(rows)
 
     # --------------------------------------------------------------------------
-    # --- DTO ProcessInfo CONVERSION ---
+    # --- MAPPING DTO -> ProcessInfo METHODS. ---
     # --------------------------------------------------------------------------
 
     @classmethod
-    def _from_dto(cls, dto: ProcessInfoDto) -> ProcessInfo:
+    def _dto_to_process_info(cls, dto: ProcessInfoDto, request: ProcessInfoRequest) -> ProcessInfo:
         """
-        Convert ProcessInfoDto into simplified ProcessInfo.
+        Map ProcessInfoDto to ProcessInfo using field request.
         """
-        command_line = cls._select_command_line(dto)
-        started_at = cls._parse_started_at(dto)
-        cpu_time = cls._parse_duration(dto.cputime or dto.time)
-        elapsed = cls._parse_duration(dto.etime)
+        d: Dict[str, Any] = {}
 
-        # Merge flags: prefer flags, fallback to f.
-        flags = dto.flags if dto.flags not in (None, '-', '') else dto.f
-        flags = None if flags in (None, '-', '') else str(flags)
+        # IDs
+        if request.process_id:
+            d[ProcessInfo.FIELD_PROCESS_ID] = dto.pid
+        if request.parent_process_id:
+            d[ProcessInfo.FIELD_PARENT_PROCESS_ID] = dto.ppid
+        if request.process_group_id:
+            d[ProcessInfo.FIELD_PROCESS_GROUP_ID] = dto.pgid
 
-        return ProcessInfo(
-            process_id=dto.pid,
-            parent_process_id=dto.ppid,
-            process_group_id=dto.pgid,
-            user_name=dto.user,
-            user_id=dto.uid,
-            real_user_name=dto.ruser,
-            real_user_id=dto.ruid,
-            process_name=dto.comm,
-            command_line=command_line,
-            cpu_usage_percent=cls._num(dto.pcpu),
-            memory_usage_percent=cls._num(dto.pmem),
-            cpu_process_time=cpu_time,
-            elapsed_since_start=elapsed,
-            started_at=started_at,
-            status=dto.stat,
-            terminal=dto.tty,
-            priority=dto.pri,
-            nice_value=dto.nice,
-            scheduler_class=dto.cls,
-            scheduler_policy=dto.policy,
-            realtime_priority=None if dto.rtprio in (None, '-', '') else str(dto.rtprio),
-            virtual_memory_kb=dto.vsz,
-            resident_memory_kb=dto.rss,
-            current_cpu=dto.psr,
-            cgroup_path=dto.cgroup,
-            threads=dto.nlwp,
-            wait_channel=(None if dto.wchan in (None, '-', '') else dto.wchan),
-            kernel_flags=flags,
-            major_page_faults=dto.maj_flt,
-            minor_page_faults=dto.min_flt,
-            session_id=dto.sid,
-            thread_group_id=dto.tgid,
-        )
+        # Users
+        if request.user_name:
+            d[ProcessInfo.FIELD_USER_NAME] = dto.user
+        if request.user_id:
+            d[ProcessInfo.FIELD_USER_ID] = dto.uid
+        if request.real_user_name:
+            d[ProcessInfo.FIELD_REAL_USER_NAME] = dto.ruser
+        if request.real_user_id:
+            d[ProcessInfo.FIELD_REAL_USER_ID] = dto.ruid
+
+        # Names and command line
+        if request.process_name:
+            d[ProcessInfo.FIELD_PROCESS_NAME] = dto.comm
+        if request.command_line:
+            cmdline = dto.args or dto.cmd
+            d[ProcessInfo.FIELD_COMMAND_LINE] = cmdline
+
+        # CPU and memory
+        if request.cpu_usage_percent:
+            d[ProcessInfo.FIELD_CPU_USAGE_PERCENT] = dto.pcpu
+        if request.memory_usage_percent:
+            d[ProcessInfo.FIELD_MEMORY_USAGE_PERCENT] = dto.pmem
+        if request.cpu_process_time:
+            d[ProcessInfo.FIELD_CPU_PROCESS_TIME] = dto.cputime or dto.time
+        if request.elapsed_since_start:
+            d[ProcessInfo.FIELD_ELAPSED_SINCE_START] = dto.etime
+        if request.started_at:
+            d[ProcessInfo.FIELD_STARTED_AT] = cls._parse_start_datetime(dto)
+
+        # Status and terminal
+        if request.status:
+            d[ProcessInfo.FIELD_STATUS] = dto.stat
+        if request.terminal:
+            d[ProcessInfo.FIELD_TERMINAL] = dto.tty
+
+        # Scheduling and priority
+        if request.priority:
+            d[ProcessInfo.FIELD_PRIORITY] = dto.pri
+        if request.nice_value:
+            d[ProcessInfo.FIELD_NICE_VALUE] = dto.nice
+        if request.scheduler_class:
+            d[ProcessInfo.FIELD_SCHEDULER_CLASS] = dto.cls
+        if request.scheduler_policy:
+            d[ProcessInfo.FIELD_SCHEDULER_POLICY] = dto.policy
+        if request.realtime_priority:
+            d[ProcessInfo.FIELD_REALTIME_PRIORITY] = dto.rtprio
+
+        # Memory
+        if request.virtual_memory_kb:
+            d[ProcessInfo.FIELD_VIRTUAL_MEMORY_KB] = dto.vsz
+        if request.resident_memory_kb:
+            d[ProcessInfo.FIELD_RESIDENT_MEMORY_KB] = dto.rss
+
+        # CPU placement and cgroup
+        if request.current_cpu:
+            d[ProcessInfo.FIELD_CURRENT_CPU] = dto.psr
+        if request.cgroup_path:
+            d[ProcessInfo.FIELD_CGROUP_PATH] = dto.cgroup
+
+        # Threads and wait info
+        if request.threads:
+            d[ProcessInfo.FIELD_THREADS] = dto.nlwp
+        if request.wait_channel:
+            d[ProcessInfo.FIELD_WAIT_CHANNEL] = dto.wchan
+
+        # Flags and faults
+        if request.kernel_flags:
+            kernel_flags = dto.flags or (str(dto.f) if dto.f is not None else None)
+            d[ProcessInfo.FIELD_KERNEL_FLAGS] = kernel_flags
+        if request.major_page_faults:
+            d[ProcessInfo.FIELD_MAJOR_PAGE_FAULTS] = dto.maj_flt
+        if request.minor_page_faults:
+            d[ProcessInfo.FIELD_MINOR_PAGE_FAULTS] = dto.min_flt
+
+        # Session and thread group
+        if request.session_id:
+            d[ProcessInfo.FIELD_SESSION_ID] = dto.sid
+        if request.thread_group_id:
+            d[ProcessInfo.FIELD_THREAD_GROUP_ID] = dto.tgid
+
+        return ProcessInfo.from_dict(d)
 
     # --------------------------------------------------------------------------
-    # --- PUBLIC METHODS ---
+    # --- PUBLIC METHODS. ---
     # --------------------------------------------------------------------------
 
     @classmethod
     def get_process_infos(cls, request: Optional[ProcessInfoRequest] = None) -> List[ProcessInfo]:
         """
-        Return a list of ProcessInfo objects collected from the system.
+        Get list of ProcessInfo objects for running processes.
         """
-        dtos = cls.get_process_info_dtos(request=request)
-        return [cls._from_dto(dto) for dto in dtos]
+        if request is None:
+            request = ProcessInfoRequest.default()
 
-    @classmethod
-    def get_process_info_dtos(cls, request: Optional[ProcessInfoRequest] = None) -> List[ProcessInfoDto]:
-        """
-        Return a list of ProcessInfoDto objects based on ps output.
-        """
-        req = request or ProcessInfoRequest.default()
-        rows_by_pid: Dict[int, Dict[str, Any]] = {}
+        plan = cls._build_ps_plan(request)
+        ps_format = cls._build_ps_format(plan)
+        output = cls._run_ps(ps_format)
 
-        # If command line is requested, run two passes: args-last and cmd-last.
-        if req.command_line:
-            cols_args = cls._columns_for_request(req, last_wide='args')
-            cols_cmd = cls._columns_for_request(req, last_wide='cmd')
+        if not output:
+            return []
 
-            lines_args = cls._run_ps_generic(cls._build_ps_cmd_with_columns(cols_args))
-            rows_args = [r for r in (cls._parse_line_with_columns(ln, cols_args) for ln in lines_args) if r is not None]
-
-            lines_cmd = cls._run_ps_generic(cls._build_ps_cmd_with_columns(cols_cmd))
-            rows_cmd = [r for r in (cls._parse_line_with_columns(ln, cols_cmd) for ln in lines_cmd) if r is not None]
-
-            for r in rows_args:
-                pid = cls._safe_int(r.get('pid'))
-                if pid is not None:
-                    rows_by_pid[pid] = r
-            for r in rows_cmd:
-                pid = cls._safe_int(r.get('pid'))
-                if pid is None:
-                    continue
-                base = rows_by_pid.get(pid)
-                if base is None:
-                    rows_by_pid[pid] = r
-                else:
-                    if r.get('cmd') not in (None, ''):
-                        base['cmd'] = r['cmd']
-        else:
-            # Single pass with only requested fixed columns (no wide last field).
-            cols = cls._columns_for_request(req, last_wide=None)
-            lines = cls._run_ps_generic(cls._build_ps_cmd_with_columns(cols))
-            for ln in lines:
-                r = cls._parse_line_with_columns(ln, cols)
-                if r is None:
-                    continue
-                pid = cls._safe_int(r.get('pid'))
-                if pid is not None:
-                    rows_by_pid[pid] = r
-
-        return [ProcessInfoDto.from_dict(row) for row in rows_by_pid.values()]
+        dto_rows = cls._parse_ps_output(output, plan)
+        result: List[ProcessInfo] = []
+        for dto in dto_rows:
+            result.append(cls._dto_to_process_info(dto, request))
+        return result
+    
