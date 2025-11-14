@@ -94,10 +94,13 @@ class ProcessInfo:
         s = str(v).strip()
         if not s or s == '-':
             return None
-        try:
-            return datetime.strptime(s, '%Y.%m.%d-%H:%M:%S')
-        except Exception:
-            return None
+        # try new format first
+        for fmt in ('%Y-%m-%d %H:%M:%S', '%Y.%m.%d-%H:%M:%S'):
+            try:
+                return datetime.strptime(s, fmt)
+            except Exception:
+                continue
+        return None
 
     @staticmethod
     def _parse_timedelta_str(v: Any) -> Optional[timedelta]:
@@ -169,7 +172,7 @@ class ProcessInfo:
         )
     
     def _fmt_datetime(self, dt: Optional[datetime]) -> Optional[str]:
-        return dt.strftime('%Y.%m.%d-%H:%M:%S') if isinstance(dt, datetime) else None
+        return dt.strftime('%Y-%m-%d %H:%M:%S') if isinstance(dt, datetime) else None
     
     def _fmt_timedelta(self, td: Optional[timedelta]) -> Optional[str]:
         if not isinstance(td, timedelta):
