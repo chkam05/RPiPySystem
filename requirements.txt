@@ -1,24 +1,39 @@
-# Developer tools:
-debugpy==1.8.17         # Python debugger (e.g. VS Code, remote debugging)
-setuptools<81           # Pin older Setuptools to avoid deprecation warning for pkg_resources (required by Supervisor)
-
-# Flask microservice:
-Flask==3.0.3            # Lightweight web framework
-Werkzeug==3.0.3         # HTTP engine and routing, the basis of Flask
-flasgger==0.9.7.1       # Automatic Swagger/OpenAPI documentation
-requests==2.32.3        # HTTP client for communicating with other services
-python-dotenv==1.0.1    # Loading configuration from .env file
-
-# Process management
-supervisor==4.2.5       # Process manager, service startup and monitoring
-
-# IoT microservice (Raspberry Pi)
-RPi.GPIO==0.7.1         # Low-level GPIO pin support on Raspberry Pi
-gpiozero==2.0           # Higher level API for hardware support (e.g. LED, buttons)
-
-# Django microservice
-Django==5.0.7           # Full web framework (ORM, admin panel, routing, migrations)
-whitenoise==6.7.0       # Serving static files in Django without an additional server
-
-# HTTP application server (for Django behind Nginx)
-gunicorn==22.0.0        # WSGI server to run Django in production
+asgiref==3.10.0
+attrs==25.4.0
+blinker==1.9.0
+certifi==2025.10.5
+charset-normalizer==3.4.3
+click==8.3.0
+colorzero==2.0
+debugpy==1.8.17
+Django==5.0.7
+flasgger==0.9.7.1
+Flask==3.0.3
+gpiozero==2.0
+gunicorn==22.0.0
+idna==3.10
+itsdangerous==2.2.0
+Jinja2==3.1.6
+jsonschema==4.25.1
+jsonschema-specifications==2025.9.1
+MarkupSafe==3.0.3
+mistune==3.1.4
+packaging==25.0
+pexpect==4.9.0
+ptyprocess==0.7.0
+PyBluez @ git+https://github.com/pybluez/pybluez.git@82cbba8a1ebd4c1e3442dfafd8581d58c50fa39e
+pydbus==0.6.0
+python-dotenv==1.0.1
+PyYAML==6.0.3
+referencing==0.36.2
+requests==2.32.3
+rpds-py==0.27.1
+RPi.GPIO==0.7.1
+setuptools==80.9.0
+six==1.17.0
+sqlparse==0.5.3
+supervisor==4.2.5
+urllib3==2.5.0
+Werkzeug==3.0.3
+wheel==0.45.1
+whitenoise==6.7.0

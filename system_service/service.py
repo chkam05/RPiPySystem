@@ -24,5 +24,5 @@ class SystemService(FlaskApiService):
         self._service.register_blueprint(HealthController(base_url_prefix))
         self._service.register_blueprint(ExternalNetworkController(base_url_prefix, AUTH_URL))
         self._service.register_blueprint(InternalNetworkController(base_url_prefix, AUTH_URL))
-        self._service.register_blueprint(InfoController(base_url_prefix, AUTH_URL, self))
+        self._service.register_blueprint(InfoController(base_url_prefix, AUTH_URL))
         self._service.register_blueprint(UsageController(base_url_prefix, AUTH_URL))

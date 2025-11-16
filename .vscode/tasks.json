@@ -1,0 +1,58 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            // --- LAUNCH SUPERVISORD ---
+            "label": "LAUNCH",
+            "type": "shell",
+            "command": "./launch2.sh",
+            "args": [
+                "--ip",
+                "192.168.1.101"
+            ],
+                "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
+        },
+        {
+            // --- RUN CURRENT PYTHON FILE AS SUDO ---
+            "label": "RUN Current Python File as SUDO (no debug)",
+            "type": "shell",
+            "command": "sudo",
+            "args": [
+                "${workspaceFolder}/.venv/bin/python",
+                "${file}"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "PYTHONPATH": "${workspaceFolder}"
+                }
+            },
+            "problemMatcher": []
+        },
+        {
+            // --- DEBUG CURRENT PYTHON FILE AS SUDO ---
+            "label": "DEBUG Current Python File as SUDO (debugpy attach)",
+            "type": "shell",
+            "command": "sudo",
+            "args": [
+                "${workspaceFolder}/.venv/bin/python",
+                "-m",
+                "debugpy",
+                "--listen",
+                "5678",
+                "--wait-for-client",
+                "${file}"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "PYTHONPATH": "${workspaceFolder}"
+                }
+            },
+            "problemMatcher": []
+        }
+    ]
+}

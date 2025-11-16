@@ -28,14 +28,14 @@ class InfoController(MidAuthController):
     _USERS_F_USER_NAME: ClassVar[str] = 'name'
     _USERS_F_LOGGABLE_USERS: ClassVar[str] = 'loggable'
 
-    def __init__(self, url_prefix_base: str, auth_url: str, service: FlaskApiService) -> None:
+    def __init__(self, url_prefix_base: str, auth_url: str) -> None:
         # Fields validation:
         if not isinstance(url_prefix_base, str) or not url_prefix_base.strip():
             raise ValueError('url_prefix_base is required')
         
         url_prefix = self.join_prefix(url_prefix_base, self._CONTROLLER_PATH)
 
-        super().__init__(self._CONTROLLER_NAME, __name__, url_prefix, auth_url, service=service)
+        super().__init__(self._CONTROLLER_NAME, __name__, url_prefix, auth_url)
     
     def register_routes(self) -> 'InfoController':
         self.add_url_rule('/', view_func=self.get_info, methods=['GET'])
