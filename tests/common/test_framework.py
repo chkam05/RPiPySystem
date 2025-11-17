@@ -47,13 +47,16 @@ class SimpleTestCase:
 
         for name, method in methods:
             ok = True
+            error_msg = ''
             try:
                 method()
-            except AssertionError:
+            except AssertionError as ae:
                 ok = False
-            except Exception:
+                error_msg = f' \"{str(ae)}\"'
+            except Exception as e:
                 ok = False
-            print(f'[{script_name}] {name}: {str(ok)}')
+                error_msg = f' \"{str(e)}\"'
+            print(f'[{script_name}] {name}: {str(ok)}{error_msg}')
     
     # region ASSERTION METHODS
 
