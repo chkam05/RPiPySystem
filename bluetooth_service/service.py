@@ -22,3 +22,24 @@ class BluetoothService(FlaskApiService):
         base_url_prefix = API_ENDPOINT
 
         self._service.register_blueprint(HealthController(base_url_prefix))
+
+    def _register_error_handlers(self) -> None:
+        from flask import jsonify
+        from .exceptions.bluetooth_error import BluetoothError
+        from .exceptions.bluetooth_authentication_error import BluetoothAuthenticationError
+
+        app = self.service
+
+        @app.errorhandler(BluetoothAuthenticationError)
+        def handle_bt_auth_error(e: BluetoothAuthenticationError):
+            return jsonify({
+                "error": "BluetoothAuthenticationError",
+                "message": str(e),
+            }), 400
+
+        @app.errorhandler(BluetoothError)
+        def handle_bt_error(e: BluetoothError):
+            return jsonify({
+                "error": "BluetoothError",
+                "message": str(e),
+            }), 400

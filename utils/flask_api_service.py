@@ -25,6 +25,7 @@ class FlaskApiService:
 
         self._configure_logger()
         self._register_controllers()
+        self._register_error_handlers()
         self._swagger = self._configure_swagger()
     
     # region --- Properties ---
@@ -83,6 +84,12 @@ class FlaskApiService:
         Must be overridden in descendant classes.
         """
         raise NotImplementedError('The _register_controllers() method must be overridden in the derived class.')
+
+    def _register_error_handlers(self) -> None:
+        """
+        Register handlers for exceptions.
+        """
+        pass
 
     # --- Interface methods ---
 
