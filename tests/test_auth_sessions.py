@@ -13,7 +13,7 @@ from tests.common.test_framework import SimpleTestCase, testcase
 from tests.conf import AUTH_LOGIN, AUTH_PASSWORD, BASE_AUTH
 
 
-class AuthLiveTests(SimpleTestCase):
+class TestAuthSessions(SimpleTestCase):
     def config(self) -> None:
         self.username = AUTH_LOGIN
         self.password = AUTH_PASSWORD
@@ -32,4 +32,4 @@ class AuthLiveTests(SimpleTestCase):
 
 
 if __name__ == '__main__':
-    AuthLiveTests().run()
+    TestAuthSessions().run()

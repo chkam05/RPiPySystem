@@ -13,7 +13,7 @@ from tests.common.test_framework import SimpleTestCase, testcase
 from tests.conf import AUTH_LOGIN, AUTH_PASSWORD, BASE_AUTH, BASE_SYSTEM
 
 
-class SupervisorLiveTests(SimpleTestCase):
+class TestSystemSupervisor(SimpleTestCase):
     def config(self) -> None:
         self.username = AUTH_LOGIN
         self.password = AUTH_PASSWORD
@@ -87,4 +87,4 @@ class SupervisorLiveTests(SimpleTestCase):
 
 
 if __name__ == '__main__':
-    SupervisorLiveTests().run()
+    TestSystemSupervisor().run()

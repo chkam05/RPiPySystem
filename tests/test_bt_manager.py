@@ -17,7 +17,7 @@ from bluetooth_service.utils.bluetooth_manager import BluetoothManager
 from tests.common.test_framework import SimpleTestCase, testcase
 
 
-class BTLiveTests(SimpleTestCase):
+class TestBtManager(SimpleTestCase):
 
     def config(self) -> None:
         self.device_name = 'HC-06'
@@ -113,4 +113,4 @@ class BTLiveTests(SimpleTestCase):
             self.fail(f'Exception: {str(e)}')
 
 if __name__ == '__main__':
-    BTLiveTests().run()
+    TestBtManager().run()
