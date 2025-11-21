@@ -276,5 +276,9 @@ class ProcessInfoRequest(PublicModel):
                 cls.FIELD_SESSION_ID: {'type': 'boolean', 'default': cls.DEFAULT_SESSION_ID},
                 cls.FIELD_THREAD_GROUP_ID: {'type': 'boolean', 'default': cls.DEFAULT_THREAD_GROUP_ID},
             },
-            'required': [],
+            'required': []
         }
+    
+    @classmethod
+    def schema_get_request(cls) -> Dict[str, Any]:
+        return cls.schema_public()

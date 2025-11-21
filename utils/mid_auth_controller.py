@@ -4,7 +4,7 @@ import requests
 
 from auth_service.models.access_level import AccessLevel
 from utils.flask_api_service import FlaskApiService
-from utils.security import SecurityUtils
+from utils.security.bearer_reader import BearerReader
 
 from .base_controller import BaseController
 
@@ -34,7 +34,7 @@ class MidAuthController(BaseController):
     # --- Authentication methods ---
 
     def _require_access(self, allowed: Iterable[AccessLevel], *, error_msg: str) -> AuthCheckResult:
-        headers = SecurityUtils.bearer_headers_from_request()
+        headers = BearerReader.bearer_headers_from_request()
         if not headers:
             return False, {'message': 'missing bearer token'}, 401
 

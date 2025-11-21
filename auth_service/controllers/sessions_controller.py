@@ -15,7 +15,7 @@ from auth_service.utils.auth_guard import AuthGuard
 from utils.auto_swag import auto_swag, bad_request, ok, request_body_json, unauthorized
 from utils.base_controller import BaseController
 from utils.flask_api_service import FlaskApiService
-from utils.security import SecurityUtils
+from utils.security.bearer_reader import BearerReader
 
 
 class SessionsController(BaseController):
@@ -227,7 +227,7 @@ class SessionsController(BaseController):
     def logout(self):
         # Prefer refresh_token from body and also allow Bearer (e.g. CLI clients)
         data = request.get_json(silent=True) or {}
-        rtok = data.get('refresh_token') or SecurityUtils.read_bearer_from_request()
+        rtok = data.get('refresh_token') or BearerReader.read_bearer_from_request()
         
         if not isinstance(rtok, str) or not rtok:
             return jsonify({'message': 'missing refresh token'}), 400

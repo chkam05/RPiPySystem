@@ -252,7 +252,7 @@ def detect_services(root: Path) -> List[ServiceHint]:
         if not d.is_dir():
             continue
         name = d.name.lower()
-        if name.endswith('_service') or name in {'auth_service', 'control_service', 'email_service', 'system_service', 'io_service', 'supervisor_service'}:
+        if name.endswith('_service'):
             # dive one level for common app layout
             if looks_like_flask_dir(d) or looks_like_flask_dir(d / d.name.replace('_service', '')):
                 hints.append(ServiceHint(path=rel(d, root), kind='flask'))
@@ -377,7 +377,7 @@ def generate_md(root: Path, max_depth: int, git_ignore: bool, extra_files: List[
         if keys:
             out.append('- klucze `.env`: ' + ', '.join(keys) + '\n')
     # common per-service config.py
-    for svc in ['auth_service', 'control_service', 'email_service', 'system_service', 'io_service', 'supervisor_service']:
+    for svc in ['auth_service', 'bt_service', 'control_service', 'email_service', 'io_service', 'system_service']:
         cfg = root / svc / 'config.py'
         if cfg.exists():
             keys = sniff_configpy_keys(read_text_safe(cfg) or '')

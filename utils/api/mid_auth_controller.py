@@ -1,25 +1,26 @@
 from abc import abstractmethod
-from typing import Iterable
+from typing import Any, Dict, Iterable, Optional, Tuple
 from auth_service.models.access_level import AccessLevel
 import requests
 
 from utils.api.base_controller import BaseController
 from utils.api.flask_api_service import FlaskApiService
-from utils.mid_auth_controller import AuthCheckResult
 from utils.security.bearer_reader import BearerReader
+
+
+AuthCheckResult = Tuple[bool, Optional[Dict[str, Any]], int]
 
 
 class MidAuthController(BaseController):
     """Base controller providing middleware-like authentication via remote auth service."""
 
     def __init__(
-            self,
-            name: str,
-            import_name:
-            str, url_prefix:
-            str, auth_url: str,
-            *,
-            service: FlaskApiService
+        self,
+        service: FlaskApiService,
+        name: str,
+        import_name: str,
+        url_prefix: str,
+        auth_url: str
     ) -> None:
         """Initialize the controller with the auth URL and attach it to the service."""
         # Fields validation:
@@ -29,7 +30,7 @@ class MidAuthController(BaseController):
         self._auth_url = auth_url.strip()
         self.http = requests
 
-        super().__init__(name, import_name, url_prefix, service=service)
+        super().__init__(service, name, import_name, url_prefix)
     
     # --------------------------------------------------------------------------
     # --- AUTHENTICATION METHODS ---

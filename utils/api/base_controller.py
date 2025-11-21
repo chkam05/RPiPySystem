@@ -10,11 +10,10 @@ class BaseController(Blueprint):
 
     def __init__(
             self,
+            service: FlaskApiService,
             name: str,
             import_name: str,
-            url_prefix: str,
-            *,
-            service: FlaskApiService) -> None:
+            url_prefix: str) -> None:
         """Initialize the controller blueprint and optionally attach a FlaskApiService."""
         # --- Input arguments validation ---
         if not name:

@@ -32,7 +32,7 @@ MAX_DEPTH="${MAX_DEPTH:-3}"
 # EXTRA_MD_FILES="${EXTRA_MD_FILES:-}"
 EXTRA_MD_FILES="./launch.sh\
     ./supervisord.conf \
-    ./.env.example"
+    ./.env.dev"
 # -----------------------------------------------------------------------------
 
 # Build a sanitized array of absolute paths for --extra

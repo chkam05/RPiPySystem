@@ -5,7 +5,7 @@ from auth_service.models.access_level import AccessLevel
 from auth_service.models.access_token import AccessToken
 from auth_service.models.user import User
 from auth_service.storage.users_storage import UsersStorage
-from utils.security import SecurityUtils
+from utils.security.bearer_reader import BearerReader
 
 
 class AuthGuard:
@@ -52,7 +52,7 @@ class AuthGuard:
             raise ValueError('invalid')
     
     def require_auth(self) -> Tuple[User, AccessToken]:
-        atok = SecurityUtils.read_bearer_from_request()
+        atok = BearerReader.read_bearer_from_request()
         if not atok:
             raise PermissionError('missing bearer')
         
