@@ -83,7 +83,7 @@ class OSUsageController(MidAuthController):
             return jsonify(err), code
 
         disks = OSUsageResolver.get_disks()
-        return jsonify(DiskUsage.list_to_public(disks)), 200
+        return jsonify(DiskUsage.to_list_dicts(disks)), 200
     
     @auto_swag(
         tags=['usage'],

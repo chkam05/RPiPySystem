@@ -81,4 +81,4 @@ class NetworkController(MidAuthController):
             return jsonify(err), code
         
         ifaces = NetworkInterfacesResolver.get_network_interfaces()
-        return jsonify(InterfaceInfo.list_to_public(ifaces)), 200
+        return jsonify(InterfaceInfo.to_list_dicts(ifaces)), 200

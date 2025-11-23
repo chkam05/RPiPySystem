@@ -37,13 +37,13 @@ class DictFormatter:
 
             # Case: dict.
             if isinstance(value, dict):
-                nested = cls.dict_without_nulls(value, keep, path)
+                nested = cls.clean_dict(value, keep, path)
                 result[key] = nested
                 continue
 
             # Case: list.
             if isinstance(value, list):
-                nested = cls.list_without_nulls(value, keep, path)
+                nested = cls.clean_list(value, keep, path)
                 result[key] = nested
                 continue
 
@@ -76,13 +76,13 @@ class DictFormatter:
 
             # Nested dict.
             if isinstance(item, dict):
-                nested = cls.dict_without_nulls(item, keep, prev_path)
+                nested = cls.clean_dict(item, keep, prev_path)
                 result.append(nested)
                 continue
 
             # Nested list.
             if isinstance(item, list):
-                nested = cls.list_without_nulls(item, keep, prev_path)
+                nested = cls.clean_list(item, keep, prev_path)
                 result.append(nested)
                 continue
 

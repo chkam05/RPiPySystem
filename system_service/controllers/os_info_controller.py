@@ -93,7 +93,7 @@ class OSInfoController(MidAuthController):
         data = ProcessInfoRequest.from_dict(raw_data) if raw_data else ProcessInfoRequest.default()
 
         processes = ProcessInfoResolver.get_process_infos(data)
-        processes_dict = ProcessInfo.list_to_public(processes)
+        processes_dict = ProcessInfo.to_list_dicts(processes)
         keep_null_fields = [k for k, v in data.to_dict().items() if v is True]
 
         return jsonify(DictFormatter.clean_list(processes_dict, keep_null_fields)), 200
@@ -125,7 +125,7 @@ class OSInfoController(MidAuthController):
         only_loggable_users = get_bool_query_arg(self._USERS_F_LOGGABLE_USERS, False)
 
         users = UserInfoResolver.get_system_users(only_loggable_users, user_name)
-        return jsonify(OSUserInfo.list_to_dicts(users)), 200
+        return jsonify(OSUserInfo.to_list_dicts(users)), 200
     
     @auto_swag(
         tags=['system'],
@@ -143,4 +143,4 @@ class OSInfoController(MidAuthController):
             return jsonify(err), code
 
         logged_in_users = UserInfoResolver.get_logged_in_users()
-        return jsonify(OSUserLoggedIn.list_to_dicts(logged_in_users)), 200
+        return jsonify(OSUserLoggedIn.to_list_dicts(logged_in_users)), 200

@@ -347,7 +347,7 @@ class ProcessInfoResolver:
             typed = cls._convert_types(raw)
             rows.append(typed)
 
-        return ProcessInfoDto.list_from_dicts(rows)
+        return ProcessInfoDto.from_list_dicts(rows)
     
     # --------------------------------------------------------------------------
     # --- MAPPING DTO -> ProcessInfo ---

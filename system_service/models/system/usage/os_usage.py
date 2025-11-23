@@ -47,7 +47,7 @@ class OSUsage(PublicModel):
             cpu_usage=CPUUsage.from_dict(d.get(cls.FIELD_CPU_USAGE, {})),
             temperature=TemperatureInfo.from_dict(d.get(cls.FIELD_TEMPERATURE, {})),
             memory=MemUsage.from_dict(d.get(cls.FIELD_MEMORY, {})),
-            disks=DiskUsage.list_from_dicts(d.get(cls.FIELD_DISKS, []))
+            disks=DiskUsage.from_list_dicts(d.get(cls.FIELD_DISKS, []))
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -56,7 +56,7 @@ class OSUsage(PublicModel):
             self.FIELD_CPU_USAGE: self.cpu_usage.to_dict(),
             self.FIELD_TEMPERATURE: self.temperature.to_dict(),
             self.FIELD_MEMORY: self.memory.to_dict(),
-            self.FIELD_DISKS: DiskUsage.list_to_dicts(self.disks),
+            self.FIELD_DISKS: DiskUsage.to_list_dicts(self.disks),
         }
 
     # --------------------------------------------------------------------------
