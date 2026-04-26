@@ -1,0 +1,21 @@
+1. SYSTEM_SERVICE
+    [+] - Network Internal
+    [+] - Network External
+    [+] - System Info
+    [+] - System Usage (proc,ram,disk)
+    [+] - System Disks/Partitions
+    [+] - System Processes
+    [+] - System Users
+    [+] - System Users Logged
+2. BT_SERVICE
+    [ ] - On/Off
+    [ ] - Scan
+    [ ] - Connect/Disconnect (PAIR)
+    [ ] - Connected devices
+    [ ] - Send (timeout resp) COM (text/binary)
+    [ ] - Receive COM
+3. EMAIL_SERVICE
+    [ ] - List
+    [ ] - Send
+    [ ] - Read
+    [ ] - Remove

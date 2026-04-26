@@ -22,7 +22,7 @@ NGINX_CONF_DIR="/etc/nginx/sites-available"
 NGINX_LINK_DIR="/etc/nginx/sites-enabled"
 SSL_DIR="/etc/ssl/${SITE}"
 
-CONF_SRC="$PROJECT_ROOT/config/${SITE}.conf"
+CONF_SRC="$PROJECT_ROOT/nginx/${SITE}.conf"
 CHAIN="$SSL_DIR/fullchain.pem"
 KEY="$SSL_DIR/privkey.pem"
 NGINX_CONF="${NGINX_CONF_DIR}/${SITE}.conf"

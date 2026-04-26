@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Panel procesów</h1>
+<table>
+    <tr><th>Nazwa</th><th>Status</th><th>Akcje</th></tr>
+    {% for p in processes %}
+        <tr>
+            <td>{{ p.name }}</td>
+            <td>{{ p.statename }}</td>
+            <td>
+                <form action='/api/supervisor/processes/{{ p.name }}/start' method='post' style='display:inline'>
+                    <button>Start</button>
+                </form>
+                <form action='/api/supervisor/processes/{{ p.name }}/stop' method='post' style='display:inline'>
+                    <button>Stop</button>
+                </form>
+                <form action='/api/supervisor/processes/{{ p.name }}/restart' method='post' style='display:inline'>
+                    <button>Restart</button>
+                </form>
+            </td>
+        </tr>
+    {% endfor %}
+</table>
+{% endblock %}

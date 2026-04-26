@@ -1,0 +1,43 @@
+{
+  "refresh_tokens": [
+    {
+      "jti": "665a7c4d-57ad-40e3-b579-430246e5d15b",
+      "uid": "16601861-02df-58e0-9144-54a4e4a8b567",
+      "exp": 1779755147,
+      "revoked": false
+    },
+    {
+      "jti": "25f87c4f-b6b2-4b37-af40-10b70d7f5f7e",
+      "uid": "16601861-02df-58e0-9144-54a4e4a8b567",
+      "exp": 1779755270,
+      "revoked": true
+    },
+    {
+      "jti": "851ebec5-f814-44cf-954c-629557cf84a9",
+      "uid": "16601861-02df-58e0-9144-54a4e4a8b567",
+      "exp": 1779755284,
+      "revoked": true
+    },
+    {
+      "jti": "970023d8-e12e-4906-bb3c-81d140783137",
+      "uid": "16601861-02df-58e0-9144-54a4e4a8b567",
+      "exp": 1779755460,
+      "revoked": false
+    },
+    {
+      "jti": "6162514c-3477-433a-9e8c-485c367b5978",
+      "uid": "16601861-02df-58e0-9144-54a4e4a8b567",
+      "exp": 1779756653,
+      "revoked": true,
+      "access_jti": "f28ba0dc-0650-4cd2-b5bb-cca9b39b9655",
+      "access_exp": 1777165553
+    }
+  ],
+  "revoked_access_tokens": [
+    {
+      "jti": "f28ba0dc-0650-4cd2-b5bb-cca9b39b9655",
+      "uid": "16601861-02df-58e0-9144-54a4e4a8b567",
+      "exp": 1777165553
+    }
+  ]
+}
