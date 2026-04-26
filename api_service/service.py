@@ -31,14 +31,10 @@ class ApiService(FlaskApiService):
         from .config import ROUTE
         from .controllers.auth_controller import AuthController
         from .controllers.health_controller import HealthController
-        #from .controllers.sessions_controller import SessionsController
-        #from .controllers.users_controller import UsersController
+        from .controllers.users_controller import UsersController
 
         base_url_prefix = ROUTE
 
-        AuthController(self, self._auth_guard, base_url_prefix)
         HealthController(self, base_url_prefix)
-        #self._service.register_blueprint(SessionsController(
-        #    base_url_prefix, self._auth_guard, self._sessions_storage, self._users_storage))
-        #self._service.register_blueprint(UsersController(
-        #    base_url_prefix, self._auth_guard, self._users_storage))
+        AuthController(self, self._auth_guard, base_url_prefix)
+        UsersController(self, self._auth_guard, base_url_prefix)

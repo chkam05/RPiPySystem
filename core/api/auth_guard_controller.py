@@ -28,7 +28,6 @@ class AuthGuardController(BaseController):
     # --------------------------------------------------------------------------------
 
     @property
-    def auth_guard(self):
+    def auth(self) -> AuthGuard:
         """Return the AuthGuard component."""
         return self._auth_guard
-    

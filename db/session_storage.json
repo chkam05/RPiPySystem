@@ -31,6 +31,14 @@
       "revoked": true,
       "access_jti": "f28ba0dc-0650-4cd2-b5bb-cca9b39b9655",
       "access_exp": 1777165553
+    },
+    {
+      "jti": "823f3ffd-ba61-47db-aea6-6b695b6057c4",
+      "uid": "16601861-02df-58e0-9144-54a4e4a8b567",
+      "exp": 1779759833,
+      "revoked": false,
+      "access_jti": "ec95e0fe-36a4-47fb-9fe5-d5f1d97d7175",
+      "access_exp": 1777168733
     }
   ],
   "revoked_access_tokens": [

@@ -80,13 +80,13 @@ class AuthController(AuthGuardController):
         if not isinstance(password, str):
             return jsonify(ErrorResponse('invalid payload', 400, details='Missing password.')), 400
 
-        user = self.auth_guard.verify_credentials(username, password)
+        user = self.auth.verify_credentials(username, password)
         if not user:
-            return jsonify(ErrorResponse('invalid credentials', 400, details='Invalid username or password.')), 401
+            return jsonify(ErrorResponse('invalid credentials', 401, details='Invalid username or password.')), 401
         
-        self.auth_guard.update_last_login(user.id)
+        self.auth.update_last_login(user.id)
 
-        return jsonify(self.auth_guard.issue_tokens(user).to_public()), 200
+        return jsonify(self.auth.issue_tokens(user).to_public()), 200
     
     @auto_swag(
         tags=['auth'],
@@ -115,7 +115,7 @@ class AuthController(AuthGuardController):
 
         # Decode and verify refresh payload
         try:
-            raw = self.auth_guard.load_refresh(rtok)
+            raw = self.auth.load_refresh(rtok)
             payload = RefreshToken.from_dict(raw)
         except ValueError:
             return jsonify(ErrorResponse('unauthorized', 401, details='Invalid or expired refresh token.')), 401
@@ -123,14 +123,14 @@ class AuthController(AuthGuardController):
         uid, jti = payload.sub, payload.jti
 
         # Checking SessionsStorage (revoked/expired)
-        if not self.auth_guard.is_valid_refresh_token(jti, uid):
+        if not self.auth.is_valid_refresh_token(jti, uid):
             return jsonify(ErrorResponse('unauthorized', 401, details='Invalid or expired refresh token.')), 401
 
-        user = self.auth_guard.user_storage.get_user_by_id(uid)
+        user = self.auth.user_storage.get_user_by_id(uid)
         if not user:
             return jsonify(ErrorResponse('unauthorized', 401, details='Token not associated with a user.')), 401
 
-        out = self.auth_guard.issue_tokens(user, prev_refresh_jti=jti)
+        out = self.auth.issue_tokens(user, prev_refresh_jti=jti)
         return jsonify(out.to_public()), 200
     
     @auto_swag(
@@ -144,9 +144,9 @@ class AuthController(AuthGuardController):
     )
     def validate(self):
         try:
-            user, payload_model = self.auth_guard.require_auth()
+            user, payload_model = self.auth.require_auth()
         except PermissionError as e:
-            return jsonify(ErrorResponse('unauthorized', 401, details='Invalid or expired refresh token.')), 401
+            return jsonify(ErrorResponse('unauthorized', 401, details='Invalid or expired access token.')), 401
 
         return jsonify(ValidationResponse(True, user, payload_model)), 200
     
@@ -183,38 +183,38 @@ class AuthController(AuthGuardController):
         
         if atok:
             try:
-                raw = self.auth_guard.load_access(atok)
+                raw = self.auth.load_access(atok)
                 access_payload = AccessToken.from_dict(raw)
             except ValueError:
                 return jsonify(ErrorResponse('unauthorized', 401, details='Invalid or expired access token.')), 401
             
-            if not self.auth_guard.is_valid_access_token(access_payload.jti):
+            if not self.auth.is_valid_access_token(access_payload.jti):
                 return jsonify(ErrorResponse('unauthorized', 401, details='Invalid or expired access token.')), 401
 
-            refresh_record = self.auth_guard.session_storage.get_refresh_by_access_jti(access_payload.jti)
-            if not refresh_record or not self.auth_guard.is_valid_refresh_token(refresh_record.jti, refresh_record.uid):
+            refresh_record = self.auth.session_storage.get_refresh_by_access_jti(access_payload.jti)
+            if not refresh_record or not self.auth.is_valid_refresh_token(refresh_record.jti, refresh_record.uid):
                 return jsonify(ErrorResponse('unauthorized', 401, details='Token pair not found or expired.')), 401
 
-            self.auth_guard.revoke(
+            self.auth.revoke(
                 refresh_jti=refresh_record.jti,
                 access_jti=access_payload.jti,
                 access_expires_at=access_payload.exp)
             return jsonify(RevokedResponse(True)), 200
 
         try:
-            raw = self.auth_guard.load_refresh(rtok)
+            raw = self.auth.load_refresh(rtok)
             refresh_payload = RefreshToken.from_dict(raw)
         except ValueError:
             return jsonify(ErrorResponse('unauthorized', 401, details='Invalid or expired refresh token.')), 401
         
-        if not self.auth_guard.is_valid_refresh_token(refresh_payload.jti, refresh_payload.sub):
+        if not self.auth.is_valid_refresh_token(refresh_payload.jti, refresh_payload.sub):
             return jsonify(ErrorResponse('unauthorized', 401, details='Invalid or expired refresh token.')), 401
 
-        refresh_record = self.auth_guard.session_storage.get_refresh(refresh_payload.jti)
+        refresh_record = self.auth.session_storage.get_refresh(refresh_payload.jti)
         if not refresh_record:
             return jsonify(ErrorResponse('unauthorized', 401, details='Token pair not found or expired.')), 401
 
-        self.auth_guard.revoke(
+        self.auth.revoke(
             refresh_jti=refresh_record.jti,
             access_jti=refresh_record.access_jti,
             access_expires_at=refresh_record.access_exp)
@@ -231,8 +231,8 @@ class AuthController(AuthGuardController):
     )
     def me(self):
         try:
-            user, _ = self.auth_guard.require_auth()
+            user, _ = self.auth.require_auth()
         except PermissionError as e:
-            return jsonify(ErrorResponse('unauthorized', 401, details='Invalid or expired refresh token.')), 401
+            return jsonify(ErrorResponse('unauthorized', 401, details='Invalid or expired access token.')), 401
 
         return jsonify(user.to_public()), 200

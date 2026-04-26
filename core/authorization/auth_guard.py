@@ -143,20 +143,20 @@ class AuthGuard:
     def require_auth(self) -> Tuple[User, AccessToken]:
         atok = BearerReader.read_bearer_from_request()
         if not atok:
-            raise PermissionError('missing bearer')
+            raise PermissionError('Missing Bearer access token.')
         
         try:
             raw = self.load_access(atok)
             payload = AccessToken.from_dict(raw)
         except Exception as e:
-            raise PermissionError('invalid token')
+            raise PermissionError('Invalid token.')
         
         if self._session_storage.is_access_revoked(payload.jti):
-            raise PermissionError('revoked token')
+            raise PermissionError('Revoked token.')
 
         actor = self._user_storage.get_user_by_id(payload.sub)
         if not actor:
-            raise PermissionError('user not found')
+            raise PermissionError('User not found.')
 
         return actor, payload
     

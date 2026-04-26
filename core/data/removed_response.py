@@ -6,35 +6,35 @@ from core.data.public_data_model import PublicDataModel
 
 
 @dataclass
-class RevokedResponse(PublicDataModel):
+class RemovedResponse(PublicDataModel):
 
     # --------------------------------------------------------------------------------
     # FIELD-NAME CONSTANTS
     # --------------------------------------------------------------------------------
 
-    FIELD_REVOKED: ClassVar[str] = 'revoked'
+    FIELD_REMOVED: ClassVar[str] = 'removed'
 
     # --------------------------------------------------------------------------------
     # FIELDS
     # --------------------------------------------------------------------------------
 
-    revoked: bool = True
+    removed: bool = True
 
     # --------------------------------------------------------------------------------
     # SERIALIZATION
     # --------------------------------------------------------------------------------
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> RevokedResponse:
+    def from_dict(cls, d: Dict[str, Any]) -> RemovedResponse:
         """Deserializes data from a dictionary in "attribute:value" format to an object."""
         return cls(
-            revoked=d[cls.FIELD_REVOKED]
+            removed=d[cls.FIELD_REMOVED]
         )
 
     def to_dict(self) -> Dict[str, Any]:
         """Serializes object to a dictionary in the format "attribute:value"."""
         return {
-            self.FIELD_REVOKED: self.revoked
+            self.FIELD_REMOVED: self.removed
         }
 
     # --------------------------------------------------------------------------------
@@ -46,8 +46,7 @@ class RevokedResponse(PublicDataModel):
         return {
             'type': 'object',
             'properties': {
-                cls.FIELD_REVOKED: {'type': 'boolean', 'example': True}
+                cls.FIELD_REMOVED: {'type': 'boolean', 'example': True}
             },
-            'required': [cls.FIELD_REVOKED],
+            'required': [cls.FIELD_REMOVED],
         }
-    
