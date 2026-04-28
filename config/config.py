@@ -2,7 +2,7 @@ from werkzeug.security import generate_password_hash
 import uuid
 
 from core.authorization.enums.access_level import AccessLevel
-from core.authorization.models.user import User
+from auth_service.models.user import User
 
 
 DEFAULT_ROOT_ID = str(uuid.uuid5(uuid.NAMESPACE_DNS, 'auth_service:root'))

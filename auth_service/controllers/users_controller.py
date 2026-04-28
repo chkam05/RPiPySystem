@@ -2,19 +2,19 @@ from __future__ import annotations
 from flask import jsonify, request
 from typing import Any, ClassVar, Dict
 
-from core.api.auth_guard_controller import AuthGuardController
+from auth_service.models.user import User
+from auth_service.storage.user_storage import UserStorage
+from auth_service.utilities.auth_guard import AuthGuard
 from core.api.auto_swag import auto_swag, bad_request, conflict, created, not_found, ok, qparam, request_body_json, unauthorized
+from core.api.base_controller import BaseController
 from core.api.flask_api_service import FlaskApiService
-from core.authorization.auth_guard import AuthGuard
 from core.authorization.enums.access_level import AccessLevel
-from core.authorization.models.user import User
-from core.authorization.storage.user_storage import UserStorage
 from core.data.error_response import ErrorResponse
 from core.data.removed_response import RemovedResponse
 
 
-class UsersController(AuthGuardController):
-    _CONTROLLER_NAME: ClassVar[str] = 'users'
+class UsersController(BaseController):
+    _CONTROLLER_NAME: ClassVar[str] = 'Users'
     _CONTROLLER_PATH: ClassVar[str] = 'users'
     _LIST_USERS_F_NAME: ClassVar[str] = 'name_filter'
     _LIST_USERS_F_LEVEL: ClassVar[str] = 'level_filter'
@@ -23,20 +23,23 @@ class UsersController(AuthGuardController):
             self,
             service: FlaskApiService,
             auth_guard: AuthGuard,
-            url_prefix_base: str) -> None:
-        
-        # Fields validation:
+            user_storage: UserStorage,
+            url_prefix_base: str
+        ) -> None:
+        # Arguments validation
+        if not auth_guard:
+            raise ValueError('The "auth_guard" component is required.')
+        if not user_storage:
+            raise ValueError('"user_storage" component is required.')
         if not isinstance(url_prefix_base, str) or not url_prefix_base.strip():
-            raise ValueError('url_prefix_base is required')
+            raise ValueError('"url_prefix_base" argument is required (e.g.: "/api").')
         
         url_prefix = self.join_prefix(url_prefix_base, self._CONTROLLER_PATH)
 
-        super().__init__(
-            service,
-            auth_guard,
-            self._CONTROLLER_NAME,
-            __name__,
-            url_prefix)
+        self._auth_guard = auth_guard
+        self._user_storage = user_storage
+
+        super().__init__(service, self._CONTROLLER_NAME, __name__, url_prefix)
     
     def register_routes(self) -> UsersController:
         self.add_url_rule('/create', view_func=self.create_user, methods=['POST'])
@@ -47,20 +50,11 @@ class UsersController(AuthGuardController):
         return self
     
     # --------------------------------------------------------------------------------
-    # PROPERTIES (shortcuts)
-    # --------------------------------------------------------------------------------
-    
-    @property
-    def _user_storage(self) -> UserStorage:
-        """Return the AuthGuard component."""
-        return self._auth_guard.user_storage
-
-    # --------------------------------------------------------------------------------
     # ENDPOINTS
     # --------------------------------------------------------------------------------
 
     @auto_swag(
-        tags=['users'],
+        tags=[_CONTROLLER_NAME],
         summary='Create User (Admin/Root)',
         description='Creates a new user account; Requires Admin or Root privileges.',
         request_body=request_body_json(User.schema_add_request()),
@@ -75,12 +69,12 @@ class UsersController(AuthGuardController):
     def create_user(self):
         # Require valid access token
         try:
-            actor, _ = self.auth.require_auth()
+            actor, _ = self._auth_guard.require_auth()
         except PermissionError as e:
             return jsonify(ErrorResponse('unauthorized', 401, details='Invalid or expired access token.')), 401
 
         # Only Admins and Root users can add new users
-        if not (self.auth.is_admin(actor) or self.auth.is_root(actor)):
+        if not (self._auth_guard.is_admin(actor) or self._auth_guard.is_root(actor)):
             return jsonify(ErrorResponse('forbidden', 403, details='You do not have permission to perform this action.')), 403
 
         data = request.get_json(silent=True) or {}
@@ -96,7 +90,7 @@ class UsersController(AuthGuardController):
 
         # Admin cannot create Root-level users
         # (only Root has permission to create another Root account)
-        if self.auth.is_admin(actor) and level == AccessLevel.ROOT:
+        if self._auth_guard.is_admin(actor) and level == AccessLevel.ROOT:
             return jsonify(ErrorResponse('forbidden', 403, details='You do not have permission to perform this action (Admin cannot create Root).')), 403
 
         try:
@@ -108,7 +102,7 @@ class UsersController(AuthGuardController):
         return jsonify(user.to_public()), 201
     
     @auto_swag(
-        tags=['users'],
+        tags=[_CONTROLLER_NAME],
         summary='List Users (User/Admin/Root)',
         description='Returns a list of users; Available to all roles.',
         parameters=[
@@ -124,7 +118,7 @@ class UsersController(AuthGuardController):
         # Any authenticated user can view the list of users.
         # There are no restrictions, since "list" itself is non-destructive.
         try:
-            _, _ = self.auth.require_auth()
+            _, _ = self._auth_guard.require_auth()
         except PermissionError as e:
             return jsonify(ErrorResponse('unauthorized', 401, details='Invalid or expired access token.')), 401
         
@@ -136,7 +130,7 @@ class UsersController(AuthGuardController):
         return jsonify(users), 200
     
     @auto_swag(
-        tags=['users'],
+        tags=[_CONTROLLER_NAME],
         summary='Get User by ID (User/Admin/Root)',
         description='Returns user details by ID; Available to all roles.',
         parameters=[{
@@ -156,7 +150,7 @@ class UsersController(AuthGuardController):
         # Any authenticated user can fetch user info.
         # For now, there’s no privacy restriction — every user can view all accounts.
         try:
-            _, _ = self.auth.require_auth()
+            _, _ = self._auth_guard.require_auth()
         except PermissionError as e:
             return jsonify(ErrorResponse('unauthorized', 401, details='Invalid or expired access token.')), 401
 
@@ -166,7 +160,7 @@ class UsersController(AuthGuardController):
         return jsonify(user.to_public()), 200
     
     @auto_swag(
-        tags=['users'],
+        tags=[_CONTROLLER_NAME],
         summary='Remove User (User: itself; Admin: not Root; Root: any)',
         description='Removes a User; Users may delete only themselves, Admins cannot delete Root, and Root may delete any user.',
         parameters=[{
@@ -186,7 +180,7 @@ class UsersController(AuthGuardController):
     def remove_user(self, id: str):
         # Require valid access token
         try:
-            actor, _ = self.auth.require_auth()
+            actor, _ = self._auth_guard.require_auth()
         except PermissionError as e:
             return jsonify(ErrorResponse('unauthorized', 401, details='Invalid or expired access token.')), 401
 
@@ -196,12 +190,12 @@ class UsersController(AuthGuardController):
 
         # --- User rule ---
         # Regular user can only delete their own account (self-removal).
-        if self.auth.is_user(actor) and actor.id != id:
+        if self._auth_guard.is_user(actor) and actor.id != id:
             return jsonify(ErrorResponse('forbidden', 403, details='You do not have permission to perform this action (User can only remove self).')), 403
 
         # --- Admin rule ---
         # Admin can delete other users, but not Root accounts.
-        if self.auth.is_admin(actor) and target.level == AccessLevel.ROOT:
+        if self._auth_guard.is_admin(actor) and target.level == AccessLevel.ROOT:
             return jsonify(ErrorResponse('forbidden', 403, details='You do not have permission to perform this action (Admin can not remove Root).')), 403
 
         # --- Root rule ---
@@ -211,7 +205,7 @@ class UsersController(AuthGuardController):
         return jsonify(RemovedResponse(True)), 200
     
     @auto_swag(
-        tags=['users'],
+        tags=[_CONTROLLER_NAME],
         summary='Update user (User: itself; Admin: not Root; Root: any)',
         description='Updates a User; Users may update only themselves and cannot change level, Admins may update non-Root users without setting level=Root, and Root may update any user.',
         parameters=[{
@@ -234,7 +228,7 @@ class UsersController(AuthGuardController):
     def update_user(self, id: str):
         # Require valid access token
         try:
-            actor, _ = self.auth.require_auth()
+            actor, _ = self._auth_guard.require_auth()
         except PermissionError as e:
             return jsonify(ErrorResponse('unauthorized', 401, details='Invalid or expired access token.')), 401
 
@@ -252,7 +246,7 @@ class UsersController(AuthGuardController):
 
         # --- User rule ---
         # Regular users can only update themselves and cannot change their access level.
-        if self.auth.is_user(actor):
+        if self._auth_guard.is_user(actor):
             if actor.id != id:
                 return jsonify(ErrorResponse('forbidden', 403, details='You do not have permission to perform this action (User can only update self).')), 403
             new_level = None  # block privilege escalation
@@ -261,7 +255,7 @@ class UsersController(AuthGuardController):
         # Admin can modify other users, but cannot:
         # - update Root accounts (to avoid privilege reduction of highest authority)
         # - set level=Root (to avoid unauthorized privilege escalation)
-        elif self.auth.is_admin(actor):
+        elif self._auth_guard.is_admin(actor):
             if target.level == AccessLevel.ROOT:
                 return jsonify(ErrorResponse('forbidden', 403, details='You do not have permission to perform this action (Admin cannot update Root user).')), 403
             if isinstance(new_level, str) and new_level == AccessLevel.ROOT.value:

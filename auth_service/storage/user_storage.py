@@ -3,9 +3,9 @@ from typing import Any, ClassVar, Dict, List, Optional
 from werkzeug.security import check_password_hash, generate_password_hash
 import uuid
 
+from auth_service.models.user import User
 from config.config import DEFAULT_USERS
 from core.authorization.enums.access_level import AccessLevel
-from core.authorization.models.user import User
 from core.data.json_storage import JsonStorage
 
 

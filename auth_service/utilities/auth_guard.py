@@ -1,17 +1,17 @@
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+from typing import Any, ClassVar, Dict, Optional, Tuple
 import time
 import uuid
 
-from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
-from typing import Any, ClassVar, Dict, Optional, Tuple
-
-from .bearer_reader import BearerReader
-from .enums.access_level import AccessLevel
-from .models.access_token import AccessToken
-from .models.refresh_token import RefreshToken
-from .models.token_pair import TokenPair
-from .models.user import User
-from .storage.session_storage import SessionStorage
-from .storage.user_storage import UserStorage
+from auth_service.models.access_token import AccessToken
+from auth_service.models.refresh_token import RefreshToken
+from auth_service.models.refresh_token_record import RefreshTokenRecord
+from auth_service.models.token_pair import TokenPair
+from auth_service.models.user import User
+from auth_service.storage.session_storage import SessionStorage
+from auth_service.storage.user_storage import UserStorage
+from core.authorization.bearer_reader import BearerReader
+from core.authorization.enums.access_level import AccessLevel
 
 
 class AuthGuard:
@@ -37,34 +37,20 @@ class AuthGuard:
         self._user_storage = user_storage
 
     # --------------------------------------------------------------------------------
-    # PROPERTIES
-    # --------------------------------------------------------------------------------
-
-    @property
-    def session_storage(self) -> SessionStorage:
-        """Return the session storage."""
-        return self._session_storage
-
-    @property
-    def user_storage(self) -> UserStorage:
-        """Return the user storage."""
-        return self._user_storage
-    
-    # --------------------------------------------------------------------------------
     # AccessLevel helpers
     # --------------------------------------------------------------------------------
 
     @classmethod
     def is_root(cls, user: User) -> bool:
-        cls.validate_access(user, AccessLevel.ROOT)
+        return cls.validate_access(user, AccessLevel.ROOT)
 
     @classmethod
     def is_admin(cls, user: User) -> bool:
-        cls.validate_access(user, AccessLevel.ADMIN)
+        return cls.validate_access(user, AccessLevel.ADMIN)
 
     @classmethod
     def is_user(cls, user: User) -> bool:
-        cls.validate_access(user, AccessLevel.USER)
+        return cls.validate_access(user, AccessLevel.USER)
 
     @staticmethod
     def validate_access(user: User, access_level: AccessLevel) -> bool:
@@ -172,28 +158,11 @@ class AuthGuard:
         revoked = False
 
         if refresh_jti:
-            revoked = self.session_storage.revoke(
+            revoked = self._session_storage.revoke(
                 refresh_jti,
                 access_jti=access_jti,
                 access_expires_at=access_expires_at)
         elif access_jti:
-            revoked = self.session_storage.revoke_access(access_jti, expires_at=access_expires_at)
+            revoked = self._session_storage.revoke_access(access_jti, expires_at=access_expires_at)
 
         return revoked
-
-    def update_last_login(self, user_uid: str) -> None:
-        self._user_storage.update_last_login(user_uid)
-
-    # --------------------------------------------------------------------------------
-    # Validation methods
-    # --------------------------------------------------------------------------------
-
-    def is_valid_refresh_token(self, jti: str, user_id: str) -> bool:
-        return self.session_storage.is_valid(jti, user_id)
-    
-    def is_valid_access_token(self, jti: str) -> bool:
-        return self.session_storage.is_valid_access(jti)
-
-    def verify_credentials(self, name: str, password: str) -> Optional[User]:
-        return self.user_storage.verify_credentials(name, password)
-    

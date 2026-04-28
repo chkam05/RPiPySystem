@@ -1,7 +1,7 @@
 from typing import Any, ClassVar, Dict, List, Optional
 import time
 
-from core.authorization.models.refresh_token_record import RefreshTokenRecord
+from auth_service.models.refresh_token_record import RefreshTokenRecord
 from core.data.json_storage import JsonStorage
 
 

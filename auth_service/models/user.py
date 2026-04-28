@@ -51,7 +51,7 @@ class User(PublicDataModel):
         if value is None:
             return None
 
-        return value.isoformat()
+        return value.isoformat(timespec='seconds')
 
     # --------------------------------------------------------------------------------
     # SERIALIZATION
@@ -112,8 +112,8 @@ class User(PublicDataModel):
         return {
             'type': 'object',
             'properties': {
-                cls.FIELD_NAME: {'type': 'string', 'minLength': 1, 'example': 'administrator'},
-                cls.FIELD_PASSWORD: {'type': 'string', 'minLength': 1, 'example': 'secret'},
+                cls.FIELD_NAME: {'type': 'string', 'minLength': 5, 'example': 'administrator'},
+                cls.FIELD_PASSWORD: {'type': 'string', 'minLength': 8, 'example': 'secret'},
                 cls.FIELD_LEVEL: {'type': 'string', 'enum': AccessLevel.get_all_str(), 'default': AccessLevel.USER.value},
             },
             'required': [cls.FIELD_NAME, cls.FIELD_PASSWORD],
@@ -124,8 +124,8 @@ class User(PublicDataModel):
         return {
             'type': 'object',
             'properties': {
-                cls.FIELD_NAME: {'type': 'string', 'minLength': 1, 'example': 'admin'},
-                cls.FIELD_PASSWORD: {'type': 'string', 'minLength': 1, 'example': 'new_secret'},
+                cls.FIELD_NAME: {'type': 'string', 'minLength': 5, 'example': 'admin'},
+                cls.FIELD_PASSWORD: {'type': 'string', 'minLength': 8, 'example': 'new_secret'},
                 cls.FIELD_LEVEL: {'type': 'string', 'enum': AccessLevel.get_all_str()},
             },
         }

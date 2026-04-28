@@ -40,7 +40,7 @@ class ErrorResponse(PublicDataModel):
         if isinstance(value, str):
             return datetime.fromisoformat(value.replace('Z', '+00:00'))
 
-        raise TypeError('"last_login" must be a datetime, string or None.')
+        raise TypeError('"date_time" must be a datetime, string or None.')
 
     @staticmethod
     def _datetime_to_str(value: Optional[datetime]) -> Optional[str]:
