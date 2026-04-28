@@ -1,11 +1,10 @@
 from __future__ import annotations
-
 from dataclasses import dataclass
 from functools import wraps
+from typing import Any, Callable, Iterable, Optional, Type, Union
 import inspect
 import sys
 import time
-from typing import Any, Callable, Iterable, Optional, Type, Union
 
 
 def testcase(fn: Callable) -> Callable:

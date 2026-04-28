@@ -1,9 +1,8 @@
 from __future__ import annotations
-
-import sys
-import time
 from pathlib import Path
 from typing import Any, Dict, List
+import sys
+import time
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:

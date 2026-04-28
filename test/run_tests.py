@@ -1,9 +1,8 @@
 from __future__ import annotations
-
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Type
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:

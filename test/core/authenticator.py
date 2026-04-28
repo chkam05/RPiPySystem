@@ -1,9 +1,7 @@
 from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Any, ClassVar, Dict, Optional
 from urllib.parse import urljoin
-
 import requests
 import urllib3
 
