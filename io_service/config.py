@@ -1,0 +1,26 @@
+import os
+
+
+# SERVICE CONFIGURATION
+
+SERVICE_NAME = 'io_service'
+LOOP_INTERVAL_SECONDS = float(os.getenv('IO_SERVICE_LOOP_INTERVAL_SECONDS', '1.0'))
+SOCKET_PATH = os.getenv('IO_SERVICE_SOCKET', './logs/io_service.sock')
+
+# DISPLAY CONFIGURATION
+
+DISPLAY_ENABLED = os.getenv('IO_DISPLAY_ENABLED', 'true').strip().casefold() in {'true', '1', 'yes', 'y', 'on'}
+DISPLAY_WIDTH = int(os.getenv('IO_DISPLAY_WIDTH', '84'))
+DISPLAY_HEIGHT = int(os.getenv('IO_DISPLAY_HEIGHT', '48'))
+DISPLAY_CONTRAST = int(os.getenv('IO_DISPLAY_CONTRAST', '60'))
+DISPLAY_SPI_PORT = int(os.getenv('IO_DISPLAY_SPI_PORT', '0'))
+DISPLAY_SPI_DEVICE = int(os.getenv('IO_DISPLAY_SPI_DEVICE', '0'))
+DISPLAY_DC_PIN = int(os.getenv('IO_DISPLAY_DC_PIN', '23'))
+DISPLAY_RST_PIN = int(os.getenv('IO_DISPLAY_RST_PIN', '24'))
+DISPLAY_BACKLIGHT_PIN = os.getenv('IO_DISPLAY_BACKLIGHT_PIN')
+
+# API CLIENT CONFIGURATION
+
+AUTH_SERVICE_URL = os.getenv('AUTH_SERVICE_URL')
+API_SERVICE_URL = os.getenv('API_SERVICE_URL', 'http://127.0.0.1:5002/api')
+HTTP_TIMEOUT_SECONDS = float(os.getenv('IO_SERVICE_HTTP_TIMEOUT_SECONDS', '5.0'))
