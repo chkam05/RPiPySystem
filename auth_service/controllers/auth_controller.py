@@ -22,7 +22,7 @@ from core.data.error_response import ErrorResponse
 
 class AuthController(BaseController):
     _CONTROLLER_NAME: ClassVar[str] = 'Auth'
-    _CONTROLLER_PATH: ClassVar[str] = ''
+    _CONTROLLER_PATH: ClassVar[str] = 'auth'
 
     def __init__(
             self,

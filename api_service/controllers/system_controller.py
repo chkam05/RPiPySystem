@@ -1,33 +1,38 @@
 from __future__ import annotations
-from datetime import datetime
-from typing import Any, ClassVar
-
+from api_service.filters.logged_in_users_filter import LoggedInUsersFilter
+from api_service.filters.processes_filter import ProcessesFilter
+from api_service.filters.users_filter import UsersFilter
+from core.system.models.cpu_info import CPUInfo
+from core.system.models.cpu_usage import CPUUsage
+from core.system.models.disk_usage import DiskUsage
+from core.system.models.mem_usage import MemUsage
+from core.system.models.os_info import OSInfo
+from core.system.models.os_usage import OSUsage
+from core.system.models.os_user_info import OSUserInfo
+from core.system.models.os_user_logged_in import OSUserLoggedIn
+from core.system.models.process_info import ProcessInfo
+from core.system.models.requests.logged_in_user_list_request import LoggedInUserListRequest
+from core.system.models.requests.process_list_request import ProcessListRequest
+from core.system.models.requests.user_list_request import UserListRequest
+from core.system.models.temperature_info import TemperatureInfo
 from flask import jsonify, request
+from typing import ClassVar
 
 from core.api.auto_swag import auto_swag, ok, pparam, request_body_json, response
 from core.api.flask_api_service import FlaskApiService
 from core.api.mid_auth_controller import MidAuthController
 from core.authorization.models.auth_check_result import AuthCheckResult
 from core.data.error_response import ErrorResponse
-from core.system.models import (
-    CPUInfo,
-    CPUUsage,
-    DiskUsage,
-    MemUsage,
-    OSInfo,
-    OSUsage,
-    OSUserInfo,
-    OSUserLoggedIn,
-    ProcessInfo,
-    ProcessListRequest,
-    TemperatureInfo,
-)
 from core.system.system_info import SystemInfo
 
 
 class SystemController(MidAuthController):
     _CONTROLLER_NAME: ClassVar[str] = 'System'
     _CONTROLLER_PATH: ClassVar[str] = 'system'
+
+    _CONTROLLER_PROCESSES_PART_NAME: ClassVar[str] = 'Processes'
+    _CONTROLLER_USAGE_PART_NAME: ClassVar[str] = 'Usage'
+    _CONTROLLER_USERS_PART_NAME: ClassVar[str] = 'Users'
 
     def __init__(
             self,
@@ -59,60 +64,12 @@ class SystemController(MidAuthController):
         self.add_url_rule('/usage/disk', view_func=self.get_disks_usage, methods=['GET'])
         self.add_url_rule('/usage/mem', view_func=self.get_mem_usage, methods=['GET'])
         self.add_url_rule('/usage/os', view_func=self.get_os_usage, methods=['GET'])
-        self.add_url_rule('/users/list', view_func=self.get_users_list, methods=['GET'])
-        self.add_url_rule('/users/active', view_func=self.get_logged_in_users, methods=['GET'])
+        self.add_url_rule('/users/list', view_func=self.get_users_list, methods=['POST'])
+        self.add_url_rule('/users/active', view_func=self.get_logged_in_users, methods=['POST'])
         self.add_url_rule('/users/active/<name>', view_func=self.get_logged_in_user_by_id_or_name, methods=['GET'])
         self.add_url_rule('/users/<idname>', view_func=self.get_user_by_id_or_name, methods=['GET'])
         return self
     
-    # --------------------------------------------------------------------------------
-    # HELPERS
-    # --------------------------------------------------------------------------------
-
-    @staticmethod
-    def _select_fields(row: dict[str, Any], fields: list[str]) -> dict[str, Any]:
-        return {field: row.get(field) for field in fields}
-
-    @staticmethod
-    def _sort_rows(rows: list[dict[str, Any]], fields: list[str]) -> list[dict[str, Any]]:
-        if not fields:
-            return rows
-
-        return sorted(rows, key=lambda row: tuple(SystemController._sort_value(row.get(field)) for field in fields))
-
-    @staticmethod
-    def _sort_value(value: Any):
-        if value is None:
-            return (1, '')
-        if isinstance(value, (int, float)):
-            return (0, value)
-        if isinstance(value, datetime):
-            return (0, value.isoformat())
-
-        return (0, str(value).casefold())
-
-    @staticmethod
-    def _normalize_process_fields(fields: list[str]) -> list[str]:
-        aliases = {
-            'id': ProcessInfo.FIELD_PROCESS_ID,
-            'pid': ProcessInfo.FIELD_PROCESS_ID,
-            'name': ProcessInfo.FIELD_PROCESS_NAME,
-            'nazwa': ProcessInfo.FIELD_PROCESS_NAME,
-            'process': ProcessInfo.FIELD_PROCESS_NAME,
-            'user': ProcessInfo.FIELD_USER_NAME,
-            'uzytkownik': ProcessInfo.FIELD_USER_NAME,
-            'użytkownik': ProcessInfo.FIELD_USER_NAME,
-        }
-        normalized: list[str] = []
-        available = set(ProcessInfo().to_dict().keys())
-        for field in fields or ProcessListRequest().fields:
-            key = str(field).strip()
-            resolved = aliases.get(key.casefold(), key)
-            if resolved in available and resolved not in normalized:
-                normalized.append(resolved)
-
-        return normalized or ProcessListRequest().fields
-
     @staticmethod
     def _error_response(message: str, code: int, details: str):
         return jsonify(ErrorResponse(message=message, code=code, details=details).to_public()), code
@@ -170,9 +127,9 @@ class SystemController(MidAuthController):
         return jsonify(self._system_info.get_temperature_info().to_public()), 200
 
     @auto_swag(
-        tags=[_CONTROLLER_NAME],
+        tags=[_CONTROLLER_PROCESSES_PART_NAME],
         summary='List Processes - Admin/Root Only',
-        description='Returns a selectable and sortable list of active processes (Admin/Root required).',
+        description='Returns a selectable, filterable and sortable list of active processes (Admin/Root required).',
         request_body=request_body_json(ProcessListRequest.schema_public(), ProcessListRequest().to_dict(), required=False),
         responses={
             200: ok(ProcessInfo.schema_public_list()),
@@ -187,13 +144,11 @@ class SystemController(MidAuthController):
 
         data = request.get_json(silent=True) or {}
         list_request = ProcessListRequest.from_dict(data)
-        fields = self._normalize_process_fields(list_request.fields)
-        sort_fields = self._normalize_process_fields(list_request.sort)
-        processes = self._sort_rows(ProcessInfo.to_public_list(self._system_info.get_processes()), sort_fields)
-        return jsonify([self._select_fields(process, fields) for process in processes]), 200
+        processes = ProcessesFilter.filter_data(ProcessInfo.to_public_list(self._system_info.get_processes()), list_request)
+        return jsonify(processes), 200
 
     @auto_swag(
-        tags=[_CONTROLLER_NAME],
+        tags=[_CONTROLLER_PROCESSES_PART_NAME],
         summary='Get Process By ID - Admin/Root Only',
         description='Returns full details for a process by PID (Admin/Root required).',
         parameters=[pparam('id', {'type': 'integer', 'example': 1234}, 'Process ID')],
@@ -215,7 +170,7 @@ class SystemController(MidAuthController):
         return jsonify(process.to_public()), 200
 
     @auto_swag(
-        tags=[_CONTROLLER_NAME],
+        tags=[_CONTROLLER_USAGE_PART_NAME],
         summary='Get CPU Usage - Admin/Root Only',
         description='Returns current CPU usage (Admin/Root required).',
         responses={
@@ -228,10 +183,13 @@ class SystemController(MidAuthController):
         if not auth_result.authenticated:
             return self._return_unauthorized_response(auth_result)
 
-        return jsonify(self._system_info.get_cpu_usage().to_public()), 200
+        interval = request.args.get('cpu_sample_time', default=0.1, type=float)
+        if interval is None or interval <= 0:
+            interval = 0.1
+        return jsonify(self._system_info.get_cpu_usage(interval=min(interval, 10.0)).to_public()), 200
 
     @auto_swag(
-        tags=[_CONTROLLER_NAME],
+        tags=[_CONTROLLER_USAGE_PART_NAME],
         summary='Get Disk Usage - Admin/Root Only',
         description='Returns disk and swap usage list (Admin/Root required).',
         responses={
@@ -247,7 +205,7 @@ class SystemController(MidAuthController):
         return jsonify(DiskUsage.to_public_list(self._system_info.get_disks())), 200
 
     @auto_swag(
-        tags=[_CONTROLLER_NAME],
+        tags=[_CONTROLLER_USAGE_PART_NAME],
         summary='Get Memory Usage - Admin/Root Only',
         description='Returns current RAM and swap usage (Admin/Root required).',
         responses={
@@ -263,7 +221,7 @@ class SystemController(MidAuthController):
         return jsonify(self._system_info.get_memory_usage().to_public()), 200
 
     @auto_swag(
-        tags=[_CONTROLLER_NAME],
+        tags=[_CONTROLLER_USAGE_PART_NAME],
         summary='Get OS Usage - Admin/Root Only',
         description='Returns grouped CPU, temperature, memory and disk usage (Admin/Root required).',
         responses={
@@ -279,9 +237,10 @@ class SystemController(MidAuthController):
         return jsonify(self._system_info.get_os_usage().to_public()), 200
 
     @auto_swag(
-        tags=[_CONTROLLER_NAME],
+        tags=[_CONTROLLER_USERS_PART_NAME],
         summary='List System Users - Admin/Root Only',
-        description='Returns a short list of system users (Admin/Root required).',
+        description='Returns a selectable, filterable and sortable list of system users (Admin/Root required).',
+        request_body=request_body_json(UserListRequest.schema_public(), UserListRequest().to_dict(), required=False),
         responses={
             200: ok(OSUserInfo.schema_public_list()),
             401: response('Unauthorized.', ErrorResponse.schema_public('unauthorized', 401, 'Unauthorized.')),
@@ -292,13 +251,13 @@ class SystemController(MidAuthController):
         if not auth_result.authenticated:
             return self._return_unauthorized_response(auth_result)
 
-        return jsonify([
-            self._select_fields(user.to_public(), [OSUserInfo.FIELD_USER_ID, OSUserInfo.FIELD_USER_NAME])
-            for user in self._system_info.get_users()
-        ]), 200
+        data = request.get_json(silent=True) or {}
+        list_request = UserListRequest.from_dict(data)
+        users = UsersFilter.filter_data(OSUserInfo.to_public_list(self._system_info.get_users()), list_request)
+        return jsonify(users), 200
 
     @auto_swag(
-        tags=[_CONTROLLER_NAME],
+        tags=[_CONTROLLER_USERS_PART_NAME],
         summary='Get System User - Admin/Root Only',
         description='Returns full system user details by user ID or user name (Admin/Root required).',
         parameters=[pparam('idname', {'type': 'string', 'example': 'pi'}, 'User ID or user name')],
@@ -320,9 +279,10 @@ class SystemController(MidAuthController):
         return jsonify(user.to_public()), 200
 
     @auto_swag(
-        tags=[_CONTROLLER_NAME],
+        tags=[_CONTROLLER_USERS_PART_NAME],
         summary='List Logged-In Users - Admin/Root Only',
-        description='Returns a short list of currently logged-in users (Admin/Root required).',
+        description='Returns a selectable, filterable and sortable list of currently logged-in users (Admin/Root required).',
+        request_body=request_body_json(LoggedInUserListRequest.schema_public(), LoggedInUserListRequest().to_dict(), required=False),
         responses={
             200: ok(OSUserLoggedIn.schema_public_list()),
             401: response('Unauthorized.', ErrorResponse.schema_public('unauthorized', 401, 'Unauthorized.')),
@@ -333,20 +293,18 @@ class SystemController(MidAuthController):
         if not auth_result.authenticated:
             return self._return_unauthorized_response(auth_result)
 
-        fields = [
-            OSUserLoggedIn.FIELD_USER_NAME,
-            OSUserLoggedIn.FIELD_LOGGED_AT,
-            OSUserLoggedIn.FIELD_TERMINAL_NAME,
-        ]
-        return jsonify([self._select_fields(user.to_public(), fields) for user in self._system_info.get_logged_in_users()]), 200
+        data = request.get_json(silent=True) or {}
+        list_request = LoggedInUserListRequest.from_dict(data)
+        users = LoggedInUsersFilter.filter_data(OSUserLoggedIn.to_public_list(self._system_info.get_logged_in_users()), list_request)
+        return jsonify(users), 200
 
     @auto_swag(
-        tags=[_CONTROLLER_NAME],
+        tags=[_CONTROLLER_USERS_PART_NAME],
         summary='Get Logged-In User - Admin/Root Only',
         description='Returns full details for a logged-in user by name (Admin/Root required).',
         parameters=[pparam('name', {'type': 'string', 'example': 'pi'}, 'Logged-in user name')],
         responses={
-            200: ok(OSUserLoggedIn.schema_public()),
+            200: ok(OSUserLoggedIn.schema_public_list()),
             401: response('Unauthorized.', ErrorResponse.schema_public('unauthorized', 401, 'Unauthorized.')),
             404: response('Logged-in user not found.', ErrorResponse.schema_public('not_found', 404, 'Logged-in user not found.')),
         },
@@ -356,8 +314,8 @@ class SystemController(MidAuthController):
         if not auth_result.authenticated:
             return self._return_unauthorized_response(auth_result)
 
-        user = self._system_info.get_logged_in_user_by_id_or_name(name)
-        if user is None:
+        users = self._system_info.get_logged_in_users_by_name(name)
+        if not users:
             return self._error_response('Logged-in user not found.', 404, f'Logged-in user "{name}" was not found.')
 
-        return jsonify(user.to_public()), 200
+        return jsonify(OSUserLoggedIn.to_public_list(users)), 200

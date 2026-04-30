@@ -1,14 +1,14 @@
 from __future__ import annotations
-from typing import ClassVar
-
 from flask import jsonify
+from typing import ClassVar
 
 from core.api.auto_swag import auto_swag, ok, pparam, response
 from core.api.flask_api_service import FlaskApiService
 from core.api.mid_auth_controller import MidAuthController
 from core.authorization.models.auth_check_result import AuthCheckResult
 from core.data.error_response import ErrorResponse
-from core.system.models import ExternalNetworkInfo, InterfaceInfo
+from core.system.models.external_network_info import ExternalNetworkInfo
+from core.system.models.interface_info import InterfaceInfo
 from core.system.system_info import SystemInfo
 
 

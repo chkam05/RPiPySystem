@@ -1,4 +1,42 @@
 from .config import ROUTE, SWAGGER_DESCRIPTION, SWAGGER_TITLE
+from core.api.swagger_spec import SwaggerSpec
+
+
+def _join_route(*parts: str) -> str:
+    cleaned = [str(part).strip('/') for part in parts if str(part).strip('/')]
+    return '/' + '/'.join(cleaned)
+
+
+SPECS = [
+    SwaggerSpec(
+        endpoint='apispec_main',
+        route='apispec/main.json',
+        name='Main',
+        title='Main API',
+        controller_path='health',
+    ),
+    SwaggerSpec(
+        endpoint='apispec_network',
+        route='apispec/network.json',
+        name='Network',
+        title='Network API',
+        controller_path='network',
+    ),
+    SwaggerSpec(
+        endpoint='apispec_supervisor',
+        route='apispec/supervisor.json',
+        name='Supervisor',
+        title='Supervisor API',
+        controller_path='supervisor',
+    ),
+    SwaggerSpec(
+        endpoint='apispec_system',
+        route='apispec/system.json',
+        name='System',
+        title='System API',
+        controller_path='system',
+    )
+]
 
 
 SWAGGER_TEMPLATE = {
@@ -30,18 +68,11 @@ SWAGGER_CONFIG = {
     'headers': [],
 
     # Define where the JSON spec will be served
-    'specs': [
-        {
-            'endpoint': 'apispec',
-            'route': f'{ROUTE}/apispec.json',   # Full path (must include the prefix)
-            'rule_filter': lambda rule: rule.rule.startswith(ROUTE),
-            'model_filter': lambda tag: True,
-        }
-    ],
+    'specs': [spec.build_spec(ROUTE) for spec in SPECS],
 
     # Define where Swagger UI will be served
-    'specs_route': f'{ROUTE}/swagger/',
-    'static_url_path': f'{ROUTE}/swagger_static',
+    'specs_route': _join_route(ROUTE, 'swagger') + '/',
+    'static_url_path': _join_route(ROUTE, 'swagger_static'),
 
     # UI meta
     'title': SWAGGER_TITLE,

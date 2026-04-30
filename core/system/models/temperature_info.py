@@ -48,7 +48,7 @@ class TemperatureInfo(PublicDataModel):
         return {
             'type': 'object',
             'properties': {
-                cls.FIELD_MAX_TEMP_C: {'type': 'number', 'nullable': True, 'example': 48.2, 'description': 'Maximum detected temperature in Celsius.'},
+                cls.FIELD_MAX_TEMP_C: {'type': 'number', 'nullable': True, 'example': 85.0, 'description': 'Critical or hot temperature threshold in Celsius.'},
                 cls.FIELD_TEMP_C: {'type': 'number', 'nullable': True, 'example': 42.5, 'description': 'Current primary temperature in Celsius.'},
             },
             'required': [],

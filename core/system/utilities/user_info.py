@@ -33,13 +33,12 @@ class UserInfoUtility:
 
         return self._get_who_users()
 
-    def get_logged_in_user_by_name(self, name: str) -> OSUserLoggedIn | None:
-        if psutil:
-            for user in psutil.users():
-                if user.name == name:
-                    return self._logged_in_user_from_psutil(user)
+    def get_logged_in_users_by_name(self, name: str) -> list[OSUserLoggedIn]:
+        return [user for user in self.get_logged_in_users() if user.user_name == name]
 
-        return self._get_who_user_by_name(name)
+    def get_logged_in_user_by_name(self, name: str) -> OSUserLoggedIn | None:
+        users = self.get_logged_in_users_by_name(name)
+        return users[0] if users else None
 
     def _get_psutil_users(self) -> list[OSUserLoggedIn]:
         if not psutil:

@@ -25,8 +25,9 @@ class CPUInfoUtility:
         if not psutil:
             return CPUUsage()
 
+        psutil.cpu_percent(interval=None, percpu=True)
         per_cpu = psutil.cpu_percent(interval=interval, percpu=True)
-        total = psutil.cpu_percent(interval=None, percpu=False)
+        total = sum(per_cpu) / len(per_cpu) if per_cpu else None
         return CPUUsage(cores={f'cpu{i}': value for i, value in enumerate(per_cpu)}, total=total)
 
     def _get_model(self) -> Optional[str]:
