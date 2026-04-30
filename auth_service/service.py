@@ -38,8 +38,6 @@ class AuthService(FlaskApiService):
         from .controllers.health_controller import HealthController
         from .controllers.users_controller import UsersController
 
-        base_url_prefix = ROUTE
-
-        HealthController(self, base_url_prefix)
-        AuthController(self, self._auth_guard, self._sessions_storage, self._users_storage, base_url_prefix)
-        UsersController(self, self._auth_guard, self._users_storage, base_url_prefix)
+        HealthController(self, ROUTE)
+        AuthController(self, self._auth_guard, self._sessions_storage, self._users_storage, ROUTE)
+        UsersController(self, self._auth_guard, self._users_storage, ROUTE)

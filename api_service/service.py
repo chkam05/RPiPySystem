@@ -39,9 +39,7 @@ class ApiService(FlaskApiService):
         from .controllers.network_controller import NetworkController
         from .controllers.system_controller import SystemController
 
-        base_url_prefix = ROUTE
-
-        HealthController(self, base_url_prefix)
-        SupervisorController(self, self._supervisor_manager, AUTH_SERVICE_URL, base_url_prefix)
-        NetworkController(self, self._system_info, AUTH_SERVICE_URL, base_url_prefix)
-        SystemController(self, self._system_info, AUTH_SERVICE_URL, base_url_prefix)
+        HealthController(self, ROUTE)
+        SupervisorController(self, self._supervisor_manager, AUTH_SERVICE_URL, ROUTE)
+        NetworkController(self, self._system_info, AUTH_SERVICE_URL, ROUTE)
+        SystemController(self, self._system_info, AUTH_SERVICE_URL, ROUTE)
